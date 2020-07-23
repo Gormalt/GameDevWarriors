@@ -31,7 +31,6 @@ var Entity = function(){
 		for(var i in Map.list){
 			if(Map.list[i].name == self.map){
 				self.mapNo = i;
-				console.log("setting mapNo to: " + self.mapNo);
 			}
 		}
 	}
@@ -362,7 +361,6 @@ var Player = function(id, username){
 		for(var i in Map.list){
 			if(Map.list[i].name == self.map){
 				initPack.map[i].player.push(self.getInitPack());
-				console.log(initPack);
 			}	
 		}
 
@@ -378,16 +376,12 @@ Player.onConnect = function(socket, username){
 		
 		if(player.name == 'bob'){
 			player.map = "Dev";
-			console.log("Fuck bob");
-			console.log(player);
 		}
 		
-		console.log(player.map);
+
 		player.findMapNo();
 		player.init();
-		console.log(player.map);
-		console.log(player.mapNo);
-		
+
 	socket.on('keyPress', function(data){
 		if(data.inputId ==='left')
 			player.pressingLeft = data.state;
@@ -418,7 +412,7 @@ Player.onConnect = function(socket, username){
 Player.getAllInitPack = function(mapNo){
 		var player = [];
 	for (var i in Player.list){
-	console.log(Player.list[i].mapNo + " " + Player.list[i].name);
+	//console.log(Player.list[i].mapNo + " " + Player.list[i].name);
 		if(Player.list[i].mapNo == mapNo){
 			player.push(Player.list[i].getInitPack());
 		}
@@ -685,7 +679,9 @@ var getMapData = function(map, cb){
 
 
 
-//getMapData("Dev", Map);
+getMapData("Dev", function(data){
+	console.log(data);
+});
 
 console.log(Map.list);
 
