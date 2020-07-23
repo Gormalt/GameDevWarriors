@@ -1,0 +1,441 @@
+<div id = signDiv>
+<p> Make sure to put in FAKE details only! This sight is not yet SSL secure</p>
+	Username: <input id = "signDiv-username" type = "text"></input>
+	<button id = "signDiv-signIn">Sign In</button>
+	<button id = "signDiv-signUp">Make Account</button>
+	<!--Username: <input id = "signDiv-username" type = "text"></input>
+	Password: <input id = "signDiv-password" type = "password"></input>
+	<button id = "signDiv-signIn">Sign In</button>
+	<button id = "signDiv-signUp">Sign Up</button> -->
+</div>
+
+<div id = makeAccount style = "display:none;"><!--
+	Player Name: <input id = "newPlayername"></input> 
+	<br> -->
+	<canvas id="ctx2" width = "500" height = "500" style = "border:1px solid #000000;"></canvas>
+</div>
+
+<div id="gameDiv" style = "display:none;">
+	<canvas id="ctx" width = "1200" height = "500" style = "border:1px solid #000000;"></canvas>
+	<div id = "chatbox" style = "position:absolute;top:20px;left:680px;z-index:1;padding-left:10px;padding-right:10px;background-color:rgb(240,240,240);padding-top:10px;">
+		<div id="chat-text" style = "width:500px;height:100px;overflow-y:scroll;">
+			<div> Hello!</div>
+		</div>
+
+		<form id = "chat-form">
+			<input id = "chat-input" type="text" style = "width:500px"></input>
+		</form>
+	</div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script> 
+	var WIDTH = 1200;
+	var HEIGHT = 500;
+	var socket = io();
+
+var UserCon = {};
+
+var Img = {};
+Img.player = new Image();
+Img.player.src = '/client/img/White Block.png';
+Img.bullet = new Image();
+Img.bullet.src = '/client/img/Bullet.png';
+Img.block = new Image();
+Img.block.src = '/client/img/White Block.png';
+
+var ctx2 = document.getElementById("ctx2").getContext("2d");
+ctx2.font = '30px Arial';
+
+creationPack = {};
+
+var selectClass = function(){
+	ctx2.fillStyle = 'black';
+	ctx2.textAlign = "center";
+	ctx2.fillText("Choose Your Class", 250 , 50);
+	ctx2.drawImage(Img.block, 75,100,150,150);
+	ctx2.drawImage(Img.block, 275,100,150,150);
+	ctx2.drawImage(Img.block, 75,300,150,150);
+	ctx2.drawImage(Img.block, 275,300,150,150);
+	UserCon.classSelec = true;
+}
+
+var avatarMaker = function(clasChar){
+	UserCon.classSelec = false;
+	UserCon.makeAva = true;
+	creationPack.clas = clasChar;
+	ctx2.clearRect(0,0,500,500);
+	creationPack.hat = 1;
+	creationPack.body = 1;
+	creationPack.weapon = 1;
+	drawAvatarPre(1,1,1);
+}
+
+var ctx = document.getElementById("ctx").getContext("2d");
+ctx.font = '30px Arial';
+var textBox = document.getElementById('chatbox');
+
+var Obstacle = function(initPack){
+	var self = {};
+	self.id = initPack.id;
+	self.x = initPack.x;
+	self.y = initPack.y;
+	self.dx = initPack.dx;
+	self.dy = initPack.dy;
+	//include self.img here;
+	Obstacle.list[self.id] = self;
+	console.log(self);
+	self.draw = function(){
+	
+	var x = self.x - Player.list[selfId].cx + WIDTH/2;
+	var y = self.y - Player.list[selfId].cy + HEIGHT/2;
+	
+	ctx.drawImage(Img.block, x, y, self.dx, self.dy);
+	//console.log("Drawing Obstacle!");
+	//console.log(self);
+	
+	}
+	
+}
+
+Obstacle.list = {};
+
+var Player = function(initPack){
+	var self = {};
+	self.id = initPack.id;
+	self.number = initPack.number;
+	self.x = initPack.x;
+	self.y = initPack.y;
+	self.hp = initPack.hp;
+	self.hpMax = initPack.hpMax;
+	self.score = initPack.score;
+	self.name = initPack.name;
+	self.dx = initPack.dx;
+	self.dy = initPack.dy;
+	self.cx = self.x + self.dx/2;
+	self.cy = self.y + self.dy/2;
+	
+	self.updateCenter = function(){
+		self.cx = self.x + self.dx/2;
+		self.cy = self.y + self.dy/2;
+		console.log("New center at: " + self.cx + ", " + self.cy);
+	}
+	
+	self.draw = function(){
+	
+	var width = Img.player.width*2;
+	var height = Img.player.width*2;
+	
+	var x = self.x - Player.list[selfId].cx + self.dx/2 + WIDTH/2;
+	var y = self.y - Player.list[selfId].cy + self.dy/2 + HEIGHT/2;
+	
+		ctx.drawImage(Img.player, x - 40, y - 40, 80, 80);
+		
+	ctx.fillStyle = 'black';
+	ctx.textAlign = "center";
+	ctx.fillText(self.name, x, y - 63);
+		
+			var hpWidth = 60 * self.hp / self.hpMax;
+	ctx.fillStyle = 'red';
+	ctx.fillRect(x - hpWidth/2, y - 54, hpWidth,8);
+		//ctx.fillText(self.score, self.x, self.y-60);
+	}
+	
+	Player.list[self.id] = self;
+	return self;
+}
+Player.list = {};
+
+var Slime = function(initPack){
+	var self = {};
+	self.id = initPack.id;
+	self.x = initPack.x;
+	self.y = initPack.y;
+	self.dx = initPack.dx;
+	self.dy = initPack.dy;
+	self.hp = initPack.hp;
+	self.hpMax = initPack.hpMax;
+	
+	self.draw = function(){
+	
+		var x = self.x - Player.list[selfId].cx + WIDTH/2;
+		var y = self.y - Player.list[selfId].cy + HEIGHT/2;
+	
+		ctx.drawImage(Img.block, x, y, 50, 50);
+	//	console.log("slime made at: " + x + ", " + y);
+	}
+	
+	Slime.list[self.id] = self;
+	return self;
+}
+Slime.list = {};
+	
+var Bullet = function(initPack){
+	var self = {};
+	self.id = initPack.id;
+	self.x = initPack.x;
+	self.y = initPack.y;
+	
+	self.draw = function(){
+	
+		var width = Img.player.width/2;
+		var height = Img.player.width/2;
+		 
+		var x = self.x - Player.list[selfId].cx + WIDTH/2;
+		var y = self.y - Player.list[selfId].cy + HEIGHT/2;
+		 
+		ctx.drawImage(Img.bullet,
+		0,0,Img.bullet.width,Img.bullet.height,
+		x-width/2,y-height/2,width,height);
+	}
+	
+	Bullet.list[self.id] = self;
+	return self;
+}
+Bullet.list = {};
+	var selfId = null;
+
+	socket.on('init', function(data){
+	//console.log(data);
+		if(data.selfId)
+			selfId = data.selfId;
+		for(var i = 0; i < data.player.length; i++){
+			new Player(data.player[i]);
+		}
+		for(var i = 0; i < data.bullet.length; i++){
+			new Bullet(data.bullet[i]);
+		}
+		for(var i = 0; i < data.slime.length; i++){
+			new Slime(data.slime[i]);
+		}
+		for(var i in data.obstacle){
+			new Obstacle(data.obstacle[i]);
+		}
+		
+	});
+	
+	socket.on('update', function(data){
+	for(var i = 0; i < data.player.length; i++){
+		var pack = data.player[i];
+		var p = Player.list[pack.id];
+		if(p){
+			if(p.x !== undefined)
+				p.x = pack.x;
+			if(p.y !== undefined)
+				p.y = pack.y;
+			if(pack.hp !== undefined)
+				p.hp = pack.hp;
+			if(pack.score !== undefined)
+				p.score = pack.score;
+				
+			p.updateCenter();
+		}
+	}
+	for(var i = 0; i < data.bullet.length; i++){
+		var pack = data.bullet[i];
+		var b = Bullet.list[data.bullet[i].id];
+		if(b){
+			if(b.x !== undefined)
+				b.x = pack.x;
+			if(b.y !== undefined)
+				b.y = pack.y;
+		}
+	}
+	for(var i = 0; i < data.slime.length; i++){
+		var pack = data.slime[i];
+		var s = Slime.list[data.slime[i].id];
+		if(s){
+			if(s.x !== undefined)
+				s.x = pack.x;
+			if(s.y !== undefined)
+				s.y = pack.y;
+		}
+	}
+	});
+	
+	socket.on('remove', function(data){
+		for(var i = 0; i < data.player.length; i++){
+			delete Player.list[data.player[i]];
+		}
+		for(var i = 0; i < data.bullet.length; i++){
+			delete Bullet.list[data.bullet[i]];
+		}
+		for(var i = 0; i < data.slime.length; i++){
+			delete Slime.list[data.slime[i]];
+		}
+	});
+	
+	setInterval( function(){
+		ctx.clearRect(0,0,WIDTH,HEIGHT);
+		for(var i in Player.list){
+			Player.list[i].draw();
+		
+		}
+		for(var i in Bullet.list){
+			Bullet.list[i].draw();
+	
+		}
+		for(var i in Obstacle.list){
+			Obstacle.list[i].draw();
+		}
+		for(var i in Slime.list){
+			Slime.list[i].draw();
+		//	console.log("drawing da slime at:" + Slime.list[i].x + ", " + Slime.list[i].y);
+		}
+		drawScore();
+		if(document.activeElement.id != 'chat-input'){
+			chatbox.style.opacity = 0.3;
+		}
+		else{
+			chatbox.style.opacity = 1;
+		}
+	}, 40);
+	
+	//var drawMap = function(){
+	//if(selfId){
+	//	var x = WIDTH/2 - Player.list[selfId].x;
+	//	var y = HEIGHT/2 - Player.list[selfId].y;
+   // }
+	//	ctx.drawImage(Img.block,x-700,y,2000,600);
+	
+	//}
+	
+	var drawScore = function(){
+		ctx.fillStyle = 'white';
+		if(selfId){
+			ctx.fillText(Player.list[selfId].score,0,30);
+		}
+	}
+
+	var signDiv = document.getElementById('signDiv');
+	var signDivUsername = document.getElementById('signDiv-username');
+	var signDivSignIn = document.getElementById('signDiv-signIn');
+	var makeAccount = document.getElementById('makeAccount');
+	var signDivSignUp = document.getElementById('signDiv-signUp');
+	//var signDivPassword = document.getElementById('signDiv-password');
+	
+	//signDivSignIn.onclick = function(){
+		//socket.emit('signIn',{username:signDivUsername.value, password:signDivPassword.value});
+	//}
+	//signDivSignUp.onclick = function(){
+		//socket.emit('signUp', {username:signDivUsername.value, password:signDivPassword.value});
+	//}
+	
+	signDivSignIn.onclick = function(){
+		socket.emit('signIn', {username:signDivUsername.value});
+	}
+	
+	signDivSignUp.onclick = function(){
+		signDiv.style.display = 'none';
+		makeAccount.style.display = 'inline-block';
+		selectClass();
+	}
+	
+	socket.on('signInResponse', function(data){
+		if(data.success){
+			signDiv.style.display = 'none';
+			gameDiv.style.display = 'inline-block';
+		}
+		else
+		alert("Sign in unsuccessful.");
+	});
+		
+	socket.on('signUpResponse', function(data){
+		if(data.success)
+		alert("Sign up successful.");
+		else
+		alert("Sign up unsuccessful.");
+	});
+
+
+var chatText = document.getElementById('chat-text');
+var chatInput = document.getElementById('chat-input');
+var chatForm = document.getElementById('chat-form');
+
+
+
+
+socket.on('addToChat', function(data){
+	chatText.innerHTML += '<div>' + data + '</div>';
+});
+socket.on('evalAnswer',function(data){
+	
+});
+socket.on('initial', function(data){
+	P1.id = data.id;
+	console.log(data.id);
+}
+);
+
+chatForm.onsubmit = function(e){
+	e.preventDefault();
+
+	if(chatInput.value[0] === '/')
+		socket.emit('evalServer', chatInput.value.slice(1));
+	else
+		socket.emit('sendMsgToServer', chatInput.value);
+	chatInput.value = '';
+}
+
+var isMouseOn = function(mX, mY, mWidth, mHeight){
+	if(UserCon.mouseX >= mX && UserCon.mouseX <= mX + mWidth && UserCon.mouseY >= mY && UserCon.mouseY <= mY + mHeight){
+		return true;
+	}
+	else
+		return false;
+}
+
+document.onkeydown = function(event){
+//console.log(document.activeElement.id);
+	if(document.activeElement.id != 'chat-input'){
+		if(event.keyCode == 68)
+		socket.emit('keyPress', {inputId:'right', state:true});
+		else if(event.keyCode == 83)
+		socket.emit('keyPress', {inputId:'down', state:true});
+		else if(event.keyCode == 65)
+		socket.emit('keyPress', {inputId:'left', state:true});
+		else if(event.keyCode == 87)
+		socket.emit('keyPress', {inputId:'up', state:true});
+	}
+}
+	
+	document.onkeyup = function(event){
+		
+			if(event.keyCode == 68)
+			socket.emit('keyPress', {inputId:'right', state:false});
+			else if(event.keyCode == 83)
+			socket.emit('keyPress', {inputId:'down', state:false});
+			else if(event.keyCode == 65)
+			socket.emit('keyPress', {inputId:'left', state:false});
+			else if(event.keyCode == 87)
+			socket.emit('keyPress', {inputId:'up', state:false});
+	}
+	document.onmousedown = function(event){
+		socket.emit('keyPress',{inputId: 'attack', state:true});
+		if(UserCon.classSelec == true){
+			if(isMouseOn(75,100,150,150))
+				avatarMaker('w');
+			if(isMouseOn(275,100,150,150))
+				avatarMaker('r');
+			if(isMouseOn(75,300,150,150))
+				avatarMaker('m');
+			if(isMouseOn(275,300,150,150))
+				avatarMaker('c');
+		}
+	}
+	document.onmouseup = function(event){
+		socket.emit('keyPress', {inputId:'attack', state:false});
+	}
+	document.onmousemove = function(event){
+		mouseMoved(event);
+	}
+	var mouseMoved = function(event){
+	//console.log(P1);
+		var x = -WIDTH/2 + event.clientX - 8;
+		var y = -HEIGHT/2 + event.clientY - 8;
+		var angle = Math.atan2(y,x) / Math.PI*180;
+		socket.emit('keyPress', {inputId:'mouseAngle', state:angle});
+		UserCon.mouseX = event.clientX;
+		UserCon.mouseY = event.clientY;
+	}
+</script>
