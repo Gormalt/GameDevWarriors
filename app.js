@@ -1,5 +1,5 @@
 var mongojs = require("mongojs");
-var db = mongojs('localhost:27017/GameDevWarriors', ['maps']);
+var db = mongojs('localhost:27017/GameDevWarriors', ['maps', 'profiles']);
 
 var express = require('express');
 var app = express();
@@ -10,14 +10,14 @@ app.get('/',function(req, res){
 });
 app.use('/client', express.static(__dirname + '/client'));
 
-serv.listen(8000);
+serv.listen(5000);
 console.log("Server started.");
 
 var SOCKET_LIST = {};
 
 var Entity = function(){
 	var self = {
-		map:0,
+		
 		x:0,
 		y:0,
 		dx:0,
@@ -25,15 +25,9 @@ var Entity = function(){
 		spdX:0,
 		spdY:0,
 		id:"",
-		mapNo:null,
+		mapNo:2,
 	}
-	self.findMapNo = function(){
-		for(var i in Map.list){
-			if(Map.list[i].name == self.map){
-				self.mapNo = i;
-			}
-		}
-	}
+
 	
 	self.update = function(){
 		self.updatePosition();
@@ -43,15 +37,41 @@ var Entity = function(){
 		self.y += self.spdY;
 	}
 	self.getDistance = function(pt){
-		return Math.sqrt(Math.pow(self.x - pt.x,2) + Math.pow(self.y - pt.y,2));
+		return Math.sqrt(Math.pow(self.x + self.dx/2 - (pt.x +pt.dx/2),2) + Math.pow(self.y + self.dy/2 - (pt.y + pt.dy/2),2));
 	}
-	self.isCollidingWith = function(trgt){
+	self.isCollidingWithBox = function(trgt){
+		
+		//if(trgt.angle !== undefined && self.angle !== undefined){
+			//var realAngle = (self.angle-trgt.angle) * Math.PI/180;
+
+			
+		//	x = Math.cos(realAngle)*self.x - Math.sin(realAngle)*self.y;
+		//	y = Math.sin(realAngle)*self.x + Math.cos(realAngle)*self.y;
+		//	console.log("Arrow Co-ors: " + x + ", " + y);
+			
+			//if(x + self.dx > trgt.x && x < trgt.x + trgt.dx && y + self.dy > trgt.y && y < trgt.y + trgt.dy){
+			//	return true;
+			//}
+		//}		
 		if(self.x + self.dx > trgt.x && self.x < trgt.x + trgt.dx && self.y + self.dy > trgt.y && self.y < trgt.y + trgt.dy){
 			return true;
 		}
 		return false;
 	}
+	self.isCollidingWithBall = function(trgt){
+		
+		if(self.getDistance(trgt) < self.dx/2 + trgt.dx/2 && self.getDistance(trgt) < self.dy/2 + trgt.dy/2){
+			return true;
+		}
+			return false;
+	}
+	
 	return self;
+
+}
+
+var getPointDis = function(x1, y1, x2, y2){
+	return Math.sqrt(Math.pow(x1 - x2,2) + Math.pow(y1 - y2,2));
 }
 
 var Slime = function(map, x, y){
@@ -66,16 +86,15 @@ var Slime = function(map, x, y){
 	self.toRemove = false;
 	self.dx = 50;
 	self.dy = 50;
+	self.angle = 0;
+	self.mapNo = map;
 	
-	self.map = map;
-	
-	self.findMapNo();
 	
 	self.targetPlayer = function(){
 		var distance = self.range;
 		var playerId = null;
 		for(var i in Player.list){
-			if(self.getDistance(Player.list[i]) < distance){
+			if(self.getDistance(Player.list[i]) < distance && Player.list[i].mapNo == self.mapNo){
 				distance = self.getDistance(Player.list[i]);
 				playerId = i;
 
@@ -131,12 +150,11 @@ var Slime = function(map, x, y){
 			hpMax:self.hpMax,
 		}
 	}
-	for(var i in Map.list){
-	if(Map.list[i].name == self.map){
-		initPack.map[i].slime.push(self.getInitPack());
+	
+		initPack.map[self.mapNo].slime.push(self.getInitPack());
 		Slime.list[self.id] = self;
-	}
-	}
+
+	
 }
 
 Slime.list = {};
@@ -145,7 +163,7 @@ Slime.update = function(mapNo){
 	var slimePack = [];
 	
 	for(var i in Slime.list){
-	if(Slime.list[i].map == Map.list[mapNo].name){
+	if(Slime.list[i].mapNo == mapNo){
 	
 		slime = Slime.list[i];
 		if(slime.cooldown >= 60 && slime.targetPlayer()){
@@ -159,14 +177,15 @@ Slime.update = function(mapNo){
 		slime.updatePos();
 		
 		for(var i in Player.list){
-			if(slime.isCollidingWith(Player.list[i])){
+			if(slime.isCollidingWithBox(Player.list[i]) && slime.mapNo == Player.list[i].mapNo){
 				Player.list[i].hp--;	
+				Player.list[i].checkHealth();
 			}			
 		}
 		
 		for(var i in Bullet.list){
-			if(slime.isCollidingWith(Bullet.list[i])){
-				slime.hp--;
+			if(slime.isCollidingWithBox(Bullet.list[i]) && Bullet.list[i].mapNo == slime.mapNo){
+				slime.hp = slime.hp - Bullet.list[i].dmg;
 			}
 		}
 		if(slime.hp <= 0){
@@ -187,63 +206,195 @@ Slime.update = function(mapNo){
 	
 }
 
-5
 
 Slime.getAllInitPack = function(mapNo){
 			var slime = [];
 	for (var i in Slime.list){
-		if(Slime.list[i].mapNo = mapNo){
+		if(Slime.list[i].mapNo == mapNo){
 			slime.push(Slime.list[i].getInitPack());
 		}
 	}
 	return slime;
 }
-var Player = function(id, username){
+
+
+//Player Object
+
+var Player = function(id, data){
 	var self = Entity();
+
 		self.id = id;
-		self.name = username;
+		self.name = data.username;
+		self.angle = 0;
+		
+		self.clas = data.clas;
+		self.level = data.level;
+		self.mapNo = data.mapNo;
+		self.x = data.x;
+		self.y = data.y;
+		self.meleeScore = false;
+		self.hat = data.hat;
+		self.body = data.body;
+		self.weapon = data.weapon;
+		
 		self.number = "" + Math.floor(10 * Math.random());
+		
 		self.selfpressingRight = false;
 		self.pressingLeft = false;
 		self.pressingUp = false;
 		self.pressingDown = false;
 		self.pressingAttack = false;
 		self.pressingJump = false;
+		
 		self.mouseAngle = 0;
+		
+		
 		self.maxSpd = 10;
 		self.hp = 10;
 		self.hpMax = 10;
 		self.score = 0;
 		self.jumpSpd = 13;
-		self.y = -80;
 		self.dx = 80;
 		self.dy = 80;
 		self.cx = self.x+(self.dx/2)
 		self.cy = self.y+(self.dy/2)
 		self.canJump = false;
+		self.cooldowns = {};
 		
-		var super_update = self.update;
+		self.cooldowns.basic = 50;
 		
-		self.update = function(){
+				self.arrowCharge = 0;
+		
+		self.checkHealth = function(){
 			if(self.hp <= 0){
 				self.hp = self.hpMax;
 				self.x = 20;
 			}
+		}
+		
+		var super_update = self.update;
+		
+		self.update = function(){
+			
 			self.updateSpd();
 			self.updatePos();
+			self.updateCooldowns();
 			//super_update();
 			if(self.pressingAttack){
-				self.shootBullet(self.mouseAngle);
+					
+				
+				if(self.clas == 'r' && self.cooldowns.basic <= 0){
+					
+					self.arrowCharge++;
+					
+				}
+				if(self.clas == 'w' && self.cooldowns.basic <= 0){
+					self.slashSword();
+				}
+				
+				if(self.clas == 'm' && self.cooldowns.basic <= 0){
+					
+					self.launchFireball();
+					self.cooldowns.basic = 70;
+					
+				}
+
 			}
+			else if(self.arrowCharge > 10 && self.clas == 'r'){
+				
+				self.fireArrow();
+				self.arrowCharge = 0;
+				self.cooldownsBasic = 50;
+				
+			}
+			
+			self.checkInteract();
 
 
 		}
-		self.shootBullet = function(angle){
-			var b = Bullet(self.id,angle);
-			b.x = self.cx;
-			b.y = self.cy;
+	
+	self.fireArrow = function(){
+		
+		Bullet({
+			parent:self.id,
+			angle:self.mouseAngle,
+			img:0,
+			dmg:5,
+			x:self.cx - 31,
+			y:self.cy - 6,
+			dx:63,
+			dy:12,
+			speed:60,
+			type:"arrow",
+		});
+	}
+	
+	self.launchFireball = function(){
+		
+		Bullet({
+			parent:self.id,
+			angle:self.mouseAngle,
+			img:0,
+			dmg:5,
+			x:self.cx - 31,
+			y:self.cy - 6,
+			dx:20,
+			dy:20,
+			speed:40,
+			type:"fireball",
+		});
+	}
+	
+	self.slashSword = function(){
+		
+		collider = Entity();
+		self.meleeScore = true;
+		self.cooldowns.basic = 50;
+		
+		if(self.mouseAngle <= 60 && self.mouseAngle >= -60){
+			collider.x = self.x + 70;
+			collider.y = self.y - 10;
+			collider.dx = 40;
+			collider.dy = self.dy + 20;
 		}
+		
+		if(self.mouseAngle < -60 && self.mouseAngle > -120){
+			collider.x = self.x - 10;
+			collider.y = self.y - 30;
+			collider.dx = self.dx + 20;
+			collider.dy = 40;
+		}
+		
+		if(self.mouseAngle <= -120 || self.mouseAngle >= 120){
+			collider.x = self.x - 30;
+			collider.y = self.y - 10;
+			collider.dx = 40;
+			collider.dy = self.dy + 20;
+		}		
+		
+		if(self.mouseAngle <= 120 && self.mouseAngle >= 60){
+			collider.x = self.x - 10;
+			collider.y = self.y + 70;
+			collider.dx = self.dx + 20;
+			collider.dy = 40;	
+		}		
+		
+		for(var i in Player.list){
+		
+		player = Player.list[i] 	
+			
+			if(collider.isCollidingWithBox(player) && self.id != i){
+				player.hp -= 5;
+				player.checkHealth();
+
+			}
+		}
+		
+		
+	}
+	
 	self.updatePos = function(){
+		
 
 		if(isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy)){
 		self.x += self.spdX;
@@ -328,8 +479,20 @@ var Player = function(id, username){
 				self.canJump = true;
 		}	
 
-
-
+	}
+	
+	self.updateCooldowns = function(){
+		if(self.cooldowns.basic >= 0)
+		self.cooldowns.basic--;
+	}
+	
+	self.checkInteract = function (){
+		for(var i in Map.list[self.mapNo].doors){
+			
+			if(self.isCollidingWithBox(Map.list[self.mapNo].doors[i]) && self.pressingUp){
+				Player.changeMap(self.id, Map.list[self.mapNo].doors[i].toMapNo);
+			}
+		}
 	}
 	
 	self.getInitPack = function(){
@@ -342,44 +505,70 @@ var Player = function(id, username){
 			hpMax:self.hpMax,
 			score:self.score,
 			name:self.name,
-			dx: self.dx,
-			dy: self.dy,
+			dx:self.dx,
+			dy:self.dy,
+			hat:self.hat,
+			body:self.body,
+			weapon:self.weapon,
+			clas:self.clas,
+			
+			angle:self.mouseAngle,
+			bowCharge:self.bowCharge,
 		};
 	}
 	self.getUpdatePack = function(){
-		return {
-			id:self.id,
-			x:self.x,
-			y:self.y,
-			hp:self.hp,
-			score:self.score,
+		if(self.clas == 'r'){
+			return {
+				id:self.id,
+				x:self.x,
+				y:self.y,
+				hp:self.hp,
+				score:self.score,
+				angle:self.mouseAngle,
+				bowCharge:self.arrowCharge,
+			}
+		}
+		if(self.clas == 'w'){
+			var temp = self.meleeScore;
+			self.meleeScore = false;
+			return {
+				id:self.id,
+				x:self.x,
+				y:self.y,
+				hp:self.hp,
+				score:self.score,
+				angle:self.mouseAngle,
+				meleeScore:temp,
+			}
+		}
+		if(self.clas == 'm'){
+
+			return {
+				id:self.id,
+				x:self.x,
+				y:self.y,
+				hp:self.hp,
+				score:self.score,
+				angle:self.mouseAngle,
+			}
 		}
 	}
-	
 	Player.list[id] = self;
+	
 	self.init = function(){
-		for(var i in Map.list){
-			if(Map.list[i].name == self.map){
-				initPack.map[i].player.push(self.getInitPack());
-			}	
-		}
-
+		
+		initPack.map[self.mapNo].player.push(self.getInitPack());
+		
 	}	
 			return self;
 }
 
 Player.list = {};
-Player.onConnect = function(socket, username){
-		var player = Player(socket.id, username);
+Player.onConnect = function(socket, data){
+		var player = Player(socket.id, data);
 		
-		player.map = "test";
-		
-		if(player.name == 'bob'){
-			player.map = "Dev";
-		}
 		
 
-		player.findMapNo();
 		player.init();
 
 	socket.on('keyPress', function(data){
@@ -398,13 +587,13 @@ Player.onConnect = function(socket, username){
 	});
 
 	
-
 	socket.emit('init',{
 		selfId:socket.id,
 		player:Player.getAllInitPack(Player.list[socket.id].mapNo),
 		bullet:Bullet.getAllInitPack(Player.list[socket.id].mapNo),
 		slime:Slime.getAllInitPack(Player.list[socket.id].mapNo),
 		obstacle:getObstacles(Player.list[socket.id].mapNo),
+		background:getBackground(Player.list[socket.id].mapNo),
 	});
 	
 }
@@ -422,11 +611,11 @@ Player.getAllInitPack = function(mapNo){
 
 Player.onDisconnect = function(socket){
 
-	for(var i in Map.list){
-		if(Player.list[socket.id] && Map.list[i].name == Player.list[socket.id].map){
-			removePack.map[i].player.push(socket.id);
-		}
+	dPlayer = Player.list[socket.id];
+	if(dPlayer){
+			removePack.map[dPlayer.mapNo].player.push(socket.id);
 	}
+	
 	delete Player.list[socket.id];
 }
 
@@ -434,9 +623,8 @@ Player.update = function(mapNo){
 	
 		var pack = [];
 	for(var i in Player.list){
-	if(Player.list[i].map == Map.list[mapNo].name){
+	if(Player.list[i].mapNo == mapNo){
 		var player = Player.list[i];
-			
 			player.update();
 			pack.push(player.getUpdatePack());	
 	
@@ -445,79 +633,185 @@ Player.update = function(mapNo){
 	}
 	return pack;
 }
-
-var Bullet = function(parent, angle){
-	var self = Entity();
-	self.id = Math.random();
-	self.spdX = Math.cos(angle/180*Math.PI)* 10;
-	self.spdY = Math.sin(angle/180*Math.PI)* 10;
-	self.parent = parent;
-	self.timer = 0;
-	self.dx = 20;
-	self.dy = 20;
-	self.toRemove = false;
-	self.map = Player.list[parent].map;
-	self.mapNo = Player.list[parent].mapNo;
-	var super_update = self.update;
-	self.update = function(){
-		if(self.timer++ > 100)
-			self.toRemove = true;
-		super_update();
+Player.changeMap = function(playerId, mapNo){
+	
+	
+	player = Player.list[playerId];;
+	
+	oldMap = player.mapNo;
+	Player.list[playerId].mapNo = mapNo;
+	Player.list[playerId].map = Map.list[mapNo].name;
+		socket = SOCKET_LIST[playerId];
 		
-		for(var i in Player.list){
-			var p = Player.list[i];
-			if(self.getDistance(p) < 32 && self.parent !== p.id){
-				self.toRemove = true;
-				p.hp -= 1;
+		socket.emit('init',{
+		selfId:socket.id,
+		player:Player.getAllInitPack(Player.list[playerId].mapNo),
+		bullet:Bullet.getAllInitPack(Player.list[playerId].mapNo),
+		slime:Slime.getAllInitPack(Player.list[playerId].mapNo),
+		obstacle:getObstacles(Player.list[playerId].mapNo),
+		background:getBackground(Player.list[playerId].mapNo),
+		whipe:true,
+	});
+	
+		
+		initPack.map[mapNo].player.push(player.getInitPack());
+	
+		removePack.map[oldMap].player.push(playerId);
+}
 
-				if(p.hp <= 0) {
-					var shooter = Player.list[self.parent];
-					if(shooter)
-						shooter.score += 1;
-					p.hp = p.hpMax;
-					p.x = Math.random() * 500;
+
+var Bullet = function(param){
+	
+	var self = Entity();
+	
+	self.angle = param.angle;
+	self.id = Math.random();
+	self.spdX = Math.cos(self.angle/180*Math.PI)* param.speed;
+	self.spdY = Math.sin(self.angle/180*Math.PI)* param.speed;
+	self.parent = param.parent;
+	self.timer = 0;
+	self.dmg = param.dmg;
+	self.x = param.x;
+	self.y = param.y;
+	self.dx = param.dx;
+	self.dy = param.dy;
+	self.toRemove = false;
+	self.mapNo = Player.list[param.parent].mapNo;
+	self.img = param.img;
+	self.type = param.type;
+	
+	self.exploding = 0;
+	
+	var super_update = self.update;
+	
+	self.update = function(){
+	
+		if(self.exploding > 0){
+			
+			self.exploding--;
+			if(self.exploding == 1){
+				self.toRemove = true;
+			}
+			self.spdX = 0;
+			self.spdY = 0;
+			return;
+			
+		}
+	
+		if(self.timer++ > 100){
+			self.toRemove = true;
+		}
+		
+		super_update();
+		if(self.type == "arrow"){
+			
+			for(var i in Player.list){
+				var p = Player.list[i];
+				if(self.isCollidingWithBall(p) && self.parent !== p.id && self.mapNo == p.mapNo){
+					self.toRemove = true;
+					p.hp -= self.dmg;
+					p.checkHealth();
 					//p.y = Math.random() * 500;
 
 				}
 			}
 		}
+		
+		if(self.type == "fireball"){
+			
+			for(var i in Player.list){
+				var p = Player.list[i];
+				if(self.isCollidingWithBall(p) && self.parent !== p.id && self.mapNo == p.mapNo){
+					
+					self.explode(200, 10);
+					
+				}
+				
+
+			}
+			
+			if(!isEmpty(self.mapNo, self.x + self.spdX, self.y + self.spdY, self.dx, self.dy)){
+
+				self.explode(200, 10);
+					
+					
+			}		
+		}
+		
+
+		
 	}
+			
+		
+		self.explode = function(radius, dmg){
+			
+				self.exploding = 20;
+				explosion = {
+					x:self.x - radius/2,
+					y:self.y - radius/2,
+					dx:radius,
+					dy:radius,
+					
+				}
+			for(var i in Player.list){
+				var p = Player.list[i];
+	
+				if(p.isCollidingWithBall(explosion) && self.mapNo == p.mapNo){
+					p.hp -= dmg;
+					p.checkHealth();
+					
+				}
+				
+
+			}
+			
+		}
+	
 	
 		self.getInitPack = function(){
 		return{
 			id:self.id,
 			x:self.x,
 			y:self.y,
+			type:self.type,
+			angle:self.angle,
+			dx:self.dx,
+			dy:self.dy,
 		};
 	}
 	self.getUpdatePack = function(){
+		
 		return {
 			id:self.id,
 			x:self.x,
 			y:self.y,
+			explo:self.exploding,
 		}
 	}
 	
 	
 	Bullet.list[self.id] = self;
-	for(var i in Map.list){
-	if(Map.list[i].name == self.map){
-		initPack.map[i].bullet.push(self.getInitPack());
-	}
-	}
+
+	initPack.map[self.mapNo].bullet.push(self.getInitPack());
+		
+	
 	return self;
 }
 Bullet.list = {};
 
 
 var Map = function(data){
+
 	var self = {};
 	self.id = data.id;
-	self.name = data.map;
+	self.name = data.name;
 	self.obstacles = data.obstacles;
 	self.monsters = data.monsters;
+	self.background = data.background;
+	self.doors = data.doors;
 	
 	Map.list[self.id] = self;
+	
 	return self;
 
 }
@@ -525,7 +819,7 @@ var Map = function(data){
 Map.list = {};
 Map({
 	id:2,
-	map:"test",
+	name:"test",
 	obstacles:[
 {
 	img:0,
@@ -552,11 +846,48 @@ Map({
 	id:3
 }
 ],
-monsters:[]
+monsters:[],
+background:[
+{
+	img:0,
+	x:120, 
+	y:-70, 
+	dx:200, 
+	dy:200,
+	id:1
+},
+{
+	img:0,
+	x:700,
+	y:-150,
+	dx:100,
+	dy:150,
+	id:2,
+}
+],
+doors:[{
+	img: 0,
+	x:700,
+	y: -150,
+	dx:100,
+	dy:150,
+	id:3,
+	bid:3,
+	toMapNo:3,
+}]
 })
+var Background = function(param){
 
-Map({id:5,map:"Dev",obstacles:[],monsters:[]});
+	var self = {};
+	self.id = param.id;
+	self.x = param.x;
+	self.y = param.y;
+	self.dx = param.dx;
+	self.dy = param.dy;
+	Background.list[self.id] = self;
+}	
 
+Background.list = {};
 
 var Obstacle = function(param){
 	var self = Entity();
@@ -574,9 +905,32 @@ var Obstacle = function(param){
 
 Obstacle.list = {};
 
+var MapObject = function(param){
+	var self = Entity();
+	self.x = param.x;
+	self.y = param.y;
+	self.dx = param.dx;
+	self.dy = param.dy;
+	self.img = param.img;
+	self.id = param.id;
+	self.mapNo = param.mapNo;
+	self.obstacleID = param.oID;
+	self.background = param.bID;
+	
+	return self;
+}
+
+var Door = function(param){
+	
+	var self = MapObject(param);
+	Map.list[self.mapNo].background[self.bID] = self;
+	
+}
+
+Door.list = {};
 
 //Obstacle Initialization. To be replaced by reading the database later.
-
+/*
 Obstacle({
 	img:0,
 	x:-600, 
@@ -605,8 +959,9 @@ Obstacle({
 	id:3,
 	mapNo:2,
 });
-
+*/
 var getObstacles = function(mapNo){
+	console.log("Map no is: " + mapNo);
 	var obstacles = [];
 	for(var i in Map.list[mapNo].obstacles){
 		obstacles.push(Map.list[mapNo].obstacles[i]);
@@ -614,10 +969,18 @@ var getObstacles = function(mapNo){
 	return obstacles;
 }
 
+var getBackground = function(mapNo){
+	var background = [];
+	for(var i in Map.list[mapNo].background){
+		background.push(Map.list[mapNo].background[i]);
+	}
+	return background;
+}
+
 Bullet.getAllInitPack = function(mapNo){
 	var bullets = [];
 	for (var i in Bullet.list){
-		if(Bullet.list[i].mapNo = mapNo){
+		if(Bullet.list[i].mapNo == mapNo){
 			bullets.push(Bullet.list[i].getInitPack());
 		}
 	}
@@ -628,7 +991,7 @@ Bullet.update = function(mapNo){
 	
 	var pack = [];
 	for(var i in Bullet.list){
-	if(Bullet.list[i].map == Map.list[mapNo].name){
+	if(Bullet.list[i].mapNo == mapNo){
 		var bullet = Bullet.list[i];
 		bullet.update();
 		if(bullet.toRemove){
@@ -647,8 +1010,9 @@ var DEBUG = true;
 //@DataBase
 
 var isValidPassword = function(data, cb){
-	db.account.find({username:data.username,password:data.password},function(err,res){
-		if(res.length > 0)
+	db.profiles.findOne({username:data.username,id:data.id},function(err,res){
+
+		if(res && res.id == data.id)
 			cb(true);
 		else
 			cb(false);
@@ -656,7 +1020,7 @@ var isValidPassword = function(data, cb){
 }
 
 var isUsernameTaken = function(data,cb){
-	db.account.find({username:data.username},function(err,res){
+	db.profiles.find({username:data.username},function(err,res){
 		if(res.length > 0)
 			cb(true);
 		else
@@ -664,26 +1028,39 @@ var isUsernameTaken = function(data,cb){
 	});
 }
 var addUser = function(data,cb){
-	db.account.insert({username:data.username,password:data.password}, function(err){
-		cb();
+	id = 100000 * Math.random();
+	id = Math.floor(id).toString();
+
+	db.profiles.insert({username:data.username, id:id, level:1, clas: data.pack.clas, mapNo: 2, x:0, y:-100, hat:data.pack.hat, body:data.pack.body, weapon:data.pack.weapon}, function(err){
+		cb(id);
 	});
 }
 
 var getMapData = function(map, cb){
-	db.maps.findOne({map:map}, function(err,res){
+
+	db.maps.findOne({name:map}, function(err,res){
 		if(res){
+
 			cb(res);
+
 		}
 	});
 }
 
+var getPlayerData = function(name, cb){
+		
+	db.profiles.findOne({username:name}, function(err,res){
+		if(res){
+			cb(res);
+		}
+		
+		
+	});
+}
+
+getMapData("Dev", Map);
 
 
-getMapData("Dev", function(data){
-	console.log(data);
-});
-
-console.log(Map.list);
 
 var isEmpty = function(mapNo,x,y,dx,dy){
 	for(var i in Map.list[mapNo].obstacles){
@@ -699,34 +1076,38 @@ io.sockets.on('connection', function(socket){
 	console.log('socket connection');
 	socket.id = Math.random();
 	SOCKET_LIST[socket.id] = socket;
-	socket.on('signIn', function(data){
-		Player.onConnect(socket, data.username);
-		socket.emit('signInResponse',{success:true});
-	});
 	//socket.on('signIn', function(data){
-	//	isValidPassword(data, function(res){
-	//		if(res){
-	//			Player.onConnect(socket);
-	//			socket.emit('signInResponse',{success:true});
-	//		}
-	//		else{
-	//			socket.emit('signInResponse',{success:false});
-	//		}
-	//	});
+	//	Player.onConnect(socket, data.username);
+	//	socket.emit('signInResponse',{success:true});
 	//});
+	socket.on('signIn', function(data){
+		
+		isValidPassword(data, function(res){
+			if(res){
+				loginData = getPlayerData(data.username, function(res){
+					Player.onConnect(socket, res);
+					
+				});
+				socket.emit('signInResponse',{success:true});
+			}
+			else{
+				socket.emit('signInResponse',{success:false});
+			}
+		});
+	});
 	
-	//socket.on('signUp', function(data){
-	//	isUsernameTaken(data, function(res){
-	//		if(res){
-	//		socket.emit('signUpResponse',{success:false});
-	//		}
-	//		else{
-	//			addUser(data, function(){
-	//				socket.emit('signUpResponse',{success:true});
-	//			});
-	//		}
-	//	});
-	//});	
+	socket.on('signUp', function(data){
+		isUsernameTaken(data, function(res){
+			if(res){
+				socket.emit('signUpResponse',{success:false});
+			}
+			else{
+				addUser(data, function(id){
+					socket.emit('signUpResponse',{success:true, id: id});
+				});
+			}
+		});
+	});	
 		
 		
 	socket.on('disconnect', function(){
@@ -745,7 +1126,7 @@ io.sockets.on('connection', function(socket){
 		
 
 		if(data == "spawnSlime"){
-		Slime("test", 900, -200);
+		Slime(2, 900, -200);
 			return;
 		}
 		var res = eval(data);
@@ -765,7 +1146,7 @@ for(var i in Map.list){
 
 
 //Initializing test-slimes
-Slime("test", 900, -200);
+Slime(2, 900, -200);
 
 setInterval(function(){
 	var pack = {map:[]};
@@ -774,13 +1155,15 @@ setInterval(function(){
 			player:Player.update(i),
 			bullet:Bullet.update(i),
 			slime:Slime.update(i),
+		
 		}
+		
 	}
 
 	for(var i in SOCKET_LIST){
 		for(var n in Map.list){
 			//console.log(Player.list);
-			if(Player.list[i] && Map.list[n].name == Player.list[i].map){
+			if(Player.list[i] && n == Player.list[i].mapNo){
 				var socket = SOCKET_LIST[i];
 				socket.emit('init', initPack.map[n]);
 				socket.emit('update', pack.map[n]);

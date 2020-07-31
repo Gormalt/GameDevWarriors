@@ -1,6 +1,7 @@
 <div id = signDiv>
 <p> Make sure to put in FAKE details only! This sight is not yet SSL secure</p>
 	Username: <input id = "signDiv-username" type = "text"></input>
+	Id: <input id = "signDiv-password" type = "text"></input>
 	<button id = "signDiv-signIn">Sign In</button>
 	<button id = "signDiv-signUp">Make Account</button>
 	<!--Username: <input id = "signDiv-username" type = "text"></input>
@@ -9,11 +10,20 @@
 	<button id = "signDiv-signUp">Sign Up</button> -->
 </div>
 
-<div id = makeAccount style = "display:none;"><!--
+<div id = "makeAccount" style = "display:none;"><!--
 	Player Name: <input id = "newPlayername"></input> 
 	<br> -->
 	<canvas id="ctx2" width = "500" height = "500" style = "border:1px solid #000000;"></canvas>
 </div>
+
+<div id = "chooseUsername" style = "display:none;">
+	<p>Enter a username. Inappropriate usernames will be banned.</p>
+	<input id = "makeAccount-username" type = "text"></input>
+	<button id = "makeAccount-check">Send</button>
+	<p id = "resultMsg"></p>
+	<button id = "backToLog" style = "display:none;">Back To Login</button>
+	
+</div> 
 
 <div id="gameDiv" style = "display:none;">
 	<canvas id="ctx" width = "1200" height = "500" style = "border:1px solid #000000;"></canvas>
@@ -30,6 +40,7 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script> 
+
 	var WIDTH = 1200;
 	var HEIGHT = 500;
 	var socket = io();
@@ -39,10 +50,85 @@ var UserCon = {};
 var Img = {};
 Img.player = new Image();
 Img.player.src = '/client/img/White Block.png';
-Img.bullet = new Image();
-Img.bullet.src = '/client/img/Bullet.png';
+Img.arrow = new Image();
+Img.arrow.src = '/client/img/projectiles/Arrow.png';
 Img.block = new Image();
 Img.block.src = '/client/img/White Block.png';
+Img.bow = {};
+Img.bow[0] = new Image();
+Img.bow[0].src = '/client/img/Avatar Sprites/Bow/Bow1.png';
+
+Img.bow[1] = new Image();
+Img.bow[1].src = '/client/img/Avatar Sprites/Bow/Bow2.png';
+
+Img.bow[2] = new Image();
+Img.bow[2].src = '/client/img/Avatar Sprites/Bow/Bow3.png';
+
+Img.bow[3] = new Image();
+Img.bow[3].src = '/client/img/Avatar Sprites/Bow/Bow4.png';
+
+Img.bow[4] = new Image();
+Img.bow[4].src = '/client/img/Avatar Sprites/Bow/Bow5.png';
+
+Img.bow[5] = new Image();
+Img.bow[5].src = '/client/img/Avatar Sprites/Bow/Bow6.png';
+
+Img.bow[6] = new Image();
+Img.bow[6].src = '/client/img/Avatar Sprites/Bow/Bow7.png';
+
+Img.sword = {};
+Img.sword[0] = new Image();
+Img.sword[0].src = '/client/img/Avatar Sprites/Sword/Sword1.png';
+
+Img.sword[1] = new Image();
+Img.sword[1].src = '/client/img/Avatar Sprites/Sword/Sword2.png';
+
+Img.sword[2] = new Image();
+Img.sword[2].src = '/client/img/Avatar Sprites/Sword/Sword3.png';
+
+Img.sword[3] = new Image();
+Img.sword[3].src = '/client/img/Avatar Sprites/Sword/Sword4.png';
+
+Img.sword[4] = new Image();
+Img.sword[4].src = '/client/img/Avatar Sprites/Sword/Sword5.png';
+
+Img.sword[5] = new Image();
+Img.sword[5].src = '/client/img/Avatar Sprites/Sword/Sword6.png';
+
+Img.sword[6] = new Image();
+Img.sword[6].src = '/client/img/Avatar Sprites/Sword/Sword7.png';
+
+Img.sword[7] = new Image();
+Img.sword[7].src = '/client/img/Avatar Sprites/Sword/Sword8.png';
+
+Img.explo = {};
+Img.explo[0] = new Image();
+Img.explo[0].src = '/client/img/Explosion/Explo1.png';
+
+Img.explo[1] = new Image();
+Img.explo[1].src = '/client/img/Explosion/Explo2.png';
+
+Img.explo[2] = new Image();
+Img.explo[2].src = '/client/img/Explosion/Explo3.png';
+
+Img.explo[3] = new Image();
+Img.explo[3].src = '/client/img/Explosion/Explo4.png';
+
+Img.explo[4] = new Image();
+Img.explo[4].src = '/client/img/Explosion/Explo5.png';
+
+Img.explo[5] = new Image();
+Img.explo[5].src = '/client/img/Explosion/Explo6.png';
+
+Img.explo[6] = new Image();
+Img.explo[6].src = '/client/img/Explosion/Explo7.png';
+
+Img.explo[7] = new Image();
+Img.explo[7].src = '/client/img/Explosion/Explo8.png';
+
+Img.explo[8] = new Image();
+Img.explo[8].src = '/client/img/Explosion/Explo8.png';
+
 
 var ctx2 = document.getElementById("ctx2").getContext("2d");
 ctx2.font = '30px Arial';
@@ -68,8 +154,22 @@ var avatarMaker = function(clasChar){
 	creationPack.hat = 1;
 	creationPack.body = 1;
 	creationPack.weapon = 1;
-	drawAvatarPre(1,1,1);
+	//drawAvatarPre(1,1,1);
+	ctx2.drawImage(Img.block, 100, 400, 300, 50);
 }
+var userSelec = function(){
+	
+	ctx2.clearRect(0, 0, 500, 500);
+	
+	UserCon.makeAva = false;
+	UserCon.userSelec = true;
+	
+	makeAccount.style.display = 'none';
+	chooseUsername.style.display = 'inline-block';
+	
+	
+}
+
 
 var ctx = document.getElementById("ctx").getContext("2d");
 ctx.font = '30px Arial';
@@ -84,9 +184,8 @@ var Obstacle = function(initPack){
 	self.dy = initPack.dy;
 	//include self.img here;
 	Obstacle.list[self.id] = self;
-	console.log(self);
+
 	self.draw = function(){
-	
 	var x = self.x - Player.list[selfId].cx + WIDTH/2;
 	var y = self.y - Player.list[selfId].cy + HEIGHT/2;
 	
@@ -98,7 +197,60 @@ var Obstacle = function(initPack){
 	
 }
 
+
 Obstacle.list = {};
+
+var Background = function(initPack){
+
+	var self = {};
+	self.id = initPack.id;
+	self.x = initPack.x;
+	self.y = initPack.y;
+	self.dx = initPack.dx;
+	self.dy = initPack.dy;
+	Background.list[self.id] = self;
+	self.draw = function(){
+	
+		var x = self.x - Player.list[selfId].cx + WIDTH/2;
+		var y = self.y - Player.list[selfId].cy + HEIGHT/2;
+	
+		ctx.drawImage(Img.block, x, y, self.dx, self.dy);
+	}
+}	
+
+Background.list = {};
+
+
+var changeAnimation = function(imgArray, imgIndex, indexMax){
+	imgIndex++;
+	if(imgIndex > indexMax){
+	imgIndex = 0;
+	}
+	console.log("Ani Index is:" + imgIndex);
+	return {img: imgArray[imgIndex], index: imgIndex};
+	
+}
+
+var threshCycle = function(value, valueSet, top, max){
+
+		if(top == max && value >= valueSet[top]){
+			return false;
+		}
+		
+		if(top == max && value < valueSet[top]){
+			return true;
+		}
+		
+		
+		if(value >= valueSet[top]){
+		 
+			return true;
+		}
+		else
+			return false;
+	
+	
+}
 
 var Player = function(initPack){
 	var self = {};
@@ -114,11 +266,25 @@ var Player = function(initPack){
 	self.dy = initPack.dy;
 	self.cx = self.x + self.dx/2;
 	self.cy = self.y + self.dy/2;
+	self.clas = initPack.clas;
+	
+	self.bowCharge = initPack.bowCharge;
+	self.bowImg = Img.bow[0];
+	self.bowImgIndex = 0;
+	
+	self.meleeScore = 11;
+	self.swordImg = Img.sword[0];
+	self.swordImgIndex = 0;
+		
+	self.angle = initPack.angle;
+	
+	self.hat = initPack.hat;
+	self.body = initPack.body;
+	self.weapon = initPack.weapon;
 	
 	self.updateCenter = function(){
 		self.cx = self.x + self.dx/2;
 		self.cy = self.y + self.dy/2;
-		console.log("New center at: " + self.cx + ", " + self.cy);
 	}
 	
 	self.draw = function(){
@@ -129,7 +295,53 @@ var Player = function(initPack){
 	var x = self.x - Player.list[selfId].cx + self.dx/2 + WIDTH/2;
 	var y = self.y - Player.list[selfId].cy + self.dy/2 + HEIGHT/2;
 	
-		ctx.drawImage(Img.player, x - 40, y - 40, 80, 80);
+		ctx.drawImage(Img.player, x - 40, y - 40, 80, 20);
+		ctx.drawImage(Img.player, x - 40, y - 20, 80, 60);
+		
+		if(self.clas == 'r'){
+			
+			if(threshCycle(self.bowCharge,[2,4,5,6,8,10,10],self.bowImgIndex, 6)){
+				
+				
+				var bowAni = changeAnimation(Img.bow,self.bowImgIndex, 6)
+				self.bowImg = bowAni.img;
+				self.bowImgIndex = bowAni.index;
+		
+			}
+		
+			ctx.save();
+			ctx.translate(x, y);
+			ctx.rotate(self.angle*Math.PI/180);
+			ctx.drawImage(self.bowImg, -(50), -(50), 100, 100);
+			ctx.restore();
+
+		}
+		
+		if(self.clas == 'w'){
+			
+	
+			self.meleeScore++;
+			console.log(self.meleeScore);
+			if(threshCycle(self.meleeScore,[1,2,6,9,12,15,18,18],self.swordImgIndex, 7)){
+				
+				console.log("animating");
+				var swordAni = changeAnimation(Img.sword,self.swordImgIndex, 7)
+				self.swordImg = swordAni.img;
+				self.swordImgIndex = swordAni.index;
+			
+			}
+			
+			ctx.save();
+
+			ctx.translate(x, y);
+			ctx.rotate(self.angle*Math.PI/180);
+			if(self.angle > 90 || self.angle < -90){
+				ctx.scale(1,-1);
+			}
+			ctx.drawImage(self.swordImg, -(50), -(50), 100, 100);
+			5
+			ctx.restore();
+		}
 		
 	ctx.fillStyle = 'black';
 	ctx.textAlign = "center";
@@ -175,19 +387,52 @@ var Bullet = function(initPack){
 	self.id = initPack.id;
 	self.x = initPack.x;
 	self.y = initPack.y;
+	self.dx = initPack.dx;
+	self.dy = initPack.dy; 
+	self.img = initPack.img;
+	self.angle = initPack.angle;
+	self.type = initPack.type;
 	
-	self.draw = function(){
+	self.explo = 0;
+	self.exploIndex = -1;
+	if(self.type == "arrow"){
+		
+		self.img = Img.arrow;
 	
-		var width = Img.player.width/2;
-		var height = Img.player.width/2;
-		 
-		var x = self.x - Player.list[selfId].cx + WIDTH/2;
-		var y = self.y - Player.list[selfId].cy + HEIGHT/2;
-		 
-		ctx.drawImage(Img.bullet,
-		0,0,Img.bullet.width,Img.bullet.height,
-		x-width/2,y-height/2,width,height);
 	}
+	else if(self.type == "fireball"){
+		
+		self.img = Img.fireball;
+	
+	}
+	
+	
+		
+	self.draw = function(){
+		 
+		if(self.explo == 0){
+			var x = self.x - Player.list[selfId].cx + self.dx/2 + WIDTH/2;
+			var y = self.y - Player.list[selfId].cy + self.dy/2 + HEIGHT/2;
+		
+		
+			ctx.save();
+			ctx.translate(x, y);
+			ctx.rotate(self.angle*Math.PI/180);
+			ctx.drawImage(self.img, -(self.dx/2), -(self.dy/2), self.dx, self.dy);
+			ctx.restore();
+		}
+		else if(self.exploIndex <= 7)){
+					
+			var exploAni = changeAnimation(Img.explo,self.exploIndex, 8)
+			self.exploImg = exploAni.img;
+			self.exploIndex = exploAni.index;
+			
+			self.drawImage(self.exploImg, self.x + (self.dx/2), self.y + (self.dy/2), 200, 200);
+		
+		}
+	}
+	
+	
 	
 	Bullet.list[self.id] = self;
 	return self;
@@ -196,6 +441,16 @@ Bullet.list = {};
 	var selfId = null;
 
 	socket.on('init', function(data){
+	
+		if(data.whipe){
+		
+			Bullet.list = {};
+			Obstacle.list = {};
+			Player.list = {};
+			Background.list = {};
+			Slime.list = {};
+			
+		}
 	//console.log(data);
 		if(data.selfId)
 			selfId = data.selfId;
@@ -211,12 +466,16 @@ Bullet.list = {};
 		for(var i in data.obstacle){
 			new Obstacle(data.obstacle[i]);
 		}
+		for(var i in data.background){
+			new Background(data.background[i]);
+		}
 		
 	});
 	
 	socket.on('update', function(data){
 	for(var i = 0; i < data.player.length; i++){
 		var pack = data.player[i];
+		console.log(pack);
 		var p = Player.list[pack.id];
 		if(p){
 			if(p.x !== undefined)
@@ -227,7 +486,13 @@ Bullet.list = {};
 				p.hp = pack.hp;
 			if(pack.score !== undefined)
 				p.score = pack.score;
-				
+			if(pack.angle  !== undefined)
+				p.angle = pack.angle;
+			if(pack.bowCharge  !== undefined)
+				p.bowCharge = pack.bowCharge;
+			if(pack.meleeScore !== undefined && pack.meleeScore == true)
+				p.meleeScore = 0;
+			
 			p.updateCenter();
 		}
 	}
@@ -239,6 +504,8 @@ Bullet.list = {};
 				b.x = pack.x;
 			if(b.y !== undefined)
 				b.y = pack.y;
+			if(b.explo !== undefined && pack.explo !== undefined)
+				b.explo = pack.explo;
 		}
 	}
 	for(var i = 0; i < data.slime.length; i++){
@@ -267,6 +534,10 @@ Bullet.list = {};
 	
 	setInterval( function(){
 		ctx.clearRect(0,0,WIDTH,HEIGHT);
+		
+		for(var i in Background.list){
+			Background.list[i].draw();
+		}
 		for(var i in Player.list){
 			Player.list[i].draw();
 		
@@ -275,14 +546,14 @@ Bullet.list = {};
 			Bullet.list[i].draw();
 	
 		}
+		
 		for(var i in Obstacle.list){
 			Obstacle.list[i].draw();
 		}
 		for(var i in Slime.list){
 			Slime.list[i].draw();
-		//	console.log("drawing da slime at:" + Slime.list[i].x + ", " + Slime.list[i].y);
 		}
-		drawScore();
+
 		if(document.activeElement.id != 'chat-input'){
 			chatbox.style.opacity = 0.3;
 		}
@@ -300,29 +571,36 @@ Bullet.list = {};
 	
 	//}
 	
-	var drawScore = function(){
-		ctx.fillStyle = 'white';
-		if(selfId){
-			ctx.fillText(Player.list[selfId].score,0,30);
-		}
-	}
 
 	var signDiv = document.getElementById('signDiv');
 	var signDivUsername = document.getElementById('signDiv-username');
 	var signDivSignIn = document.getElementById('signDiv-signIn');
 	var makeAccount = document.getElementById('makeAccount');
+	var chooseUsername = document.getElementById('chooseUsername');
+	var resultMsg = document.getElementById('resultMsg');
 	var signDivSignUp = document.getElementById('signDiv-signUp');
-	//var signDivPassword = document.getElementById('signDiv-password');
 	
+	var usernameCheckInput = document.getElementById('makeAccount-username');
+	var checkButton = document.getElementById('makeAccount-check');
+	
+	var signDivPassword = document.getElementById('signDiv-password');
+	var backToLog = document.getElementById('backToLog');
 	//signDivSignIn.onclick = function(){
 		//socket.emit('signIn',{username:signDivUsername.value, password:signDivPassword.value});
 	//}
 	//signDivSignUp.onclick = function(){
 		//socket.emit('signUp', {username:signDivUsername.value, password:signDivPassword.value});
 	//}
-	
+	checkButton.onclick = function(){
+		socket.emit('signUp', {username:usernameCheckInput.value, pack:creationPack});
+	}
 	signDivSignIn.onclick = function(){
-		socket.emit('signIn', {username:signDivUsername.value});
+		socket.emit('signIn', {username:signDivUsername.value, id:signDivPassword.value});
+	}
+	
+	backToLog.onclick = function(){
+		signDiv.style.display = 'inline-block';
+		chooseUsername.style.display = 'none';
 	}
 	
 	signDivSignUp.onclick = function(){
@@ -341,10 +619,13 @@ Bullet.list = {};
 	});
 		
 	socket.on('signUpResponse', function(data){
-		if(data.success)
-		alert("Sign up successful.");
+		if(data.success){
+			checkButton.style.display = 'none';
+			resultMsg.innerHTML = "Account created! Your ID is: " + data.id + ". Save this ID, you will use it to log in.";
+			backToLog.style.display = 'inline-block';
+			}
 		else
-		alert("Sign up unsuccessful.");
+			resultMsg.innerHTML = "Username taken, select another username.";
 	});
 
 
@@ -413,6 +694,7 @@ document.onkeydown = function(event){
 	document.onmousedown = function(event){
 		socket.emit('keyPress',{inputId: 'attack', state:true});
 		if(UserCon.classSelec == true){
+		
 			if(isMouseOn(75,100,150,150))
 				avatarMaker('w');
 			if(isMouseOn(275,100,150,150))
@@ -422,6 +704,14 @@ document.onkeydown = function(event){
 			if(isMouseOn(275,300,150,150))
 				avatarMaker('c');
 		}
+		
+		if(UserCon.makeAva == true){
+
+			if(isMouseOn(100, 400, 300, 50)){
+				userSelec();
+			
+			}
+		}
 	}
 	document.onmouseup = function(event){
 		socket.emit('keyPress', {inputId:'attack', state:false});
@@ -430,12 +720,12 @@ document.onkeydown = function(event){
 		mouseMoved(event);
 	}
 	var mouseMoved = function(event){
-	//console.log(P1);
+
 		var x = -WIDTH/2 + event.clientX - 8;
 		var y = -HEIGHT/2 + event.clientY - 8;
 		var angle = Math.atan2(y,x) / Math.PI*180;
 		socket.emit('keyPress', {inputId:'mouseAngle', state:angle});
-		UserCon.mouseX = event.clientX;
-		UserCon.mouseY = event.clientY;
+		UserCon.mouseX = event.clientX - 8;
+		UserCon.mouseY = event.clientY - 8;
 	}
 </script>
