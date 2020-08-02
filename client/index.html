@@ -129,6 +129,9 @@ Img.explo[7].src = '/client/img/Explosion/Explo8.png';
 Img.explo[8] = new Image();
 Img.explo[8].src = '/client/img/Explosion/Explo8.png';
 
+Img.fireball = new Image();
+Img.fireball.src = '/client/img/Projectiles/Fireball.png';
+
 
 var ctx2 = document.getElementById("ctx2").getContext("2d");
 ctx2.font = '30px Arial';
@@ -138,11 +141,17 @@ creationPack = {};
 var selectClass = function(){
 	ctx2.fillStyle = 'black';
 	ctx2.textAlign = "center";
-	ctx2.fillText("Choose Your Class", 250 , 50);
+	ctx2.fillText("Choose Your Class", 250 , 50); 
 	ctx2.drawImage(Img.block, 75,100,150,150);
-	ctx2.drawImage(Img.block, 275,100,150,150);
+	ctx2.fillText("Warrior", 150 , 90); 
+	ctx2.drawImage(Img.block, 275 ,100,150,150);
+	ctx2.fillText("Ranger", 350 , 90); 
 	ctx2.drawImage(Img.block, 75,300,150,150);
+	ctx2.fillText("Mage", 150 , 290); 
+
 	ctx2.drawImage(Img.block, 275,300,150,150);
+	ctx2.fillText("None", 350, 290); 
+
 	UserCon.classSelec = true;
 }
 
@@ -155,6 +164,7 @@ var avatarMaker = function(clasChar){
 	creationPack.body = 1;
 	creationPack.weapon = 1;
 	//drawAvatarPre(1,1,1);
+	ctx2.fillText("Finish", 250, 390);
 	ctx2.drawImage(Img.block, 100, 400, 300, 50);
 }
 var userSelec = function(){
@@ -321,10 +331,8 @@ var Player = function(initPack){
 			
 	
 			self.meleeScore++;
-			console.log(self.meleeScore);
 			if(threshCycle(self.meleeScore,[1,2,6,9,12,15,18,18],self.swordImgIndex, 7)){
 				
-				console.log("animating");
 				var swordAni = changeAnimation(Img.sword,self.swordImgIndex, 7)
 				self.swordImg = swordAni.img;
 				self.swordImgIndex = swordAni.index;
@@ -409,11 +417,13 @@ var Bullet = function(initPack){
 	
 		
 	self.draw = function(){
-		 
+	
+		var x = self.x - Player.list[selfId].cx + self.dx/2 + WIDTH/2;
+		var y = self.y - Player.list[selfId].cy + self.dy/2 + HEIGHT/2;
+
 		if(self.explo == 0){
-			var x = self.x - Player.list[selfId].cx + self.dx/2 + WIDTH/2;
-			var y = self.y - Player.list[selfId].cy + self.dy/2 + HEIGHT/2;
-		
+			
+			
 		
 			ctx.save();
 			ctx.translate(x, y);
@@ -421,13 +431,18 @@ var Bullet = function(initPack){
 			ctx.drawImage(self.img, -(self.dx/2), -(self.dy/2), self.dx, self.dy);
 			ctx.restore();
 		}
-		else if(self.exploIndex <= 7)){
+		else if(self.exploIndex <= 7){
+			
 					
-			var exploAni = changeAnimation(Img.explo,self.exploIndex, 8)
+			var exploAni = changeAnimation(Img.explo,self.exploIndex, 8);
 			self.exploImg = exploAni.img;
 			self.exploIndex = exploAni.index;
 			
-			self.drawImage(self.exploImg, self.x + (self.dx/2), self.y + (self.dy/2), 200, 200);
+			//ctx.save();
+			//ctx.translate(x, y);
+			//ctx.rotate(self.angle*Math.PI/180);
+			ctx.drawImage(self.exploImg, x - (self.exploImg.width/2), y - (self.exploImg.height/2), self.exploImg.width, self.exploImg.height);
+			//ctx.restore();
 		
 		}
 	}
@@ -475,7 +490,6 @@ Bullet.list = {};
 	socket.on('update', function(data){
 	for(var i = 0; i < data.player.length; i++){
 		var pack = data.player[i];
-		console.log(pack);
 		var p = Player.list[pack.id];
 		if(p){
 			if(p.x !== undefined)

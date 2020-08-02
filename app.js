@@ -349,7 +349,7 @@ var Player = function(id, data){
 		
 		collider = Entity();
 		self.meleeScore = true;
-		self.cooldowns.basic = 50;
+		self.cooldowns.basic = 20;
 		
 		if(self.mouseAngle <= 60 && self.mouseAngle >= -60){
 			collider.x = self.x + 70;
@@ -723,7 +723,7 @@ var Bullet = function(param){
 				var p = Player.list[i];
 				if(self.isCollidingWithBall(p) && self.parent !== p.id && self.mapNo == p.mapNo){
 					
-					self.explode(200, 10);
+					self.explode(100, 10);
 					
 				}
 				
@@ -732,7 +732,7 @@ var Bullet = function(param){
 			
 			if(!isEmpty(self.mapNo, self.x + self.spdX, self.y + self.spdY, self.dx, self.dy)){
 
-				self.explode(200, 10);
+				self.explode(100, 10);
 					
 					
 			}		
