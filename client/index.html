@@ -25,6 +25,12 @@
 	
 </div> 
 
+<!-- <div id = "menuUI" style = "display:none;background-color:black;position:absolute;top:20px;left:20px;width:680px;height:450px;z-index:2;">
+	-->
+<div id = "menuUI" style = "display:none;position:absolute;top:20px;left:20px;z-index:2;background-color:white;">
+	<canvas id="ctx3" width = "580" height = "480" style = "border:1px solid #000000;"></canvas>
+</div>
+
 <div id="gameDiv" style = "display:none;">
 	<canvas id="ctx" width = "1200" height = "500" style = "border:1px solid #000000;"></canvas>
 	<div id = "chatbox" style = "position:absolute;top:20px;left:680px;z-index:1;padding-left:10px;padding-right:10px;background-color:rgb(240,240,240);padding-top:10px;">
@@ -39,13 +45,25 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<!--
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+-->
 <script> 
+
+
+//$.getJSON('/client/npcText.json', function(data){
+	//console.log(data);
+//});
 
 	var WIDTH = 1200;
 	var HEIGHT = 500;
 	var socket = io();
 
 var UserCon = {};
+UserCon.setAbil = {};
+
+UserCon.menu = false;
+UserCon.textBubble = false;
 
 var Img = {};
 Img.player = new Image();
@@ -76,6 +94,7 @@ Img.bow[5].src = '/client/img/Avatar Sprites/Bow/Bow6.png';
 Img.bow[6] = new Image();
 Img.bow[6].src = '/client/img/Avatar Sprites/Bow/Bow7.png';
 
+
 Img.sword = {};
 Img.sword[0] = new Image();
 Img.sword[0].src = '/client/img/Avatar Sprites/Sword/Sword1.png';
@@ -100,6 +119,7 @@ Img.sword[6].src = '/client/img/Avatar Sprites/Sword/Sword7.png';
 
 Img.sword[7] = new Image();
 Img.sword[7].src = '/client/img/Avatar Sprites/Sword/Sword8.png';
+
 
 Img.explo = {};
 Img.explo[0] = new Image();
@@ -129,14 +149,131 @@ Img.explo[7].src = '/client/img/Explosion/Explo8.png';
 Img.explo[8] = new Image();
 Img.explo[8].src = '/client/img/Explosion/Explo8.png';
 
+Img.str = new Image();
+Img.str.src = '/client/img/White Block.png';
+Img.vit = new Image();
+Img.vit.src = '/client/img/White Block.png';
+Img.def = new Image();
+Img.def.src = '/client/img/White Block.png';
+Img.mag = new Image();
+Img.mag.src = '/client/img/White Block.png';
+
+
 Img.fireball = new Image();
 Img.fireball.src = '/client/img/Projectiles/Fireball.png';
 
+Img.icons = {};
+Img.icons[0] = new Image();
+Img.icons[0].src = '/client/img/White Block.png';
+
+Img.icons[1] = new Image();
+Img.icons[1].src = '/client/img/White Block.png';
+
+Img.icons[2] = new Image();
+Img.icons[2].src = '/client/img/White Block.png';
+
+Img.icons[3] = new Image();
+Img.icons[3].src = '/client/img/White Block.png';
+//UI Stuff Below!
+
+Img.obs = {};
+
+Img.obs[0] = new Image();
+Img.obs[0].src = '/client/img/White Block.png';
+
+Img.obs[1] = new Image();
+Img.obs[1].src = '/client/img/Terrain/Town/Ground1.png';
+
+Img.obs[2] = new Image();
+Img.obs[2].src = '/client/img/Terrain/Town/Ground2.png';
+
+Img.obs[3] = new Image();
+Img.obs[3].src = '/client/img/Terrain/Town/Ground3.png';
+
+var ctx3 = document.getElementById("ctx3").getContext("2d");
+
+ctx3.font = '30px Arial';
+
+drawMenu = function(){
+	
+	
+	ctx3.drawImage(Img.block, 0, 400, 580, 80);
+	
+	ctx3.drawImage(Img.block, 3, 0, 190, 60);
+	ctx3.drawImage(Img.block, 195, 0, 190, 60);
+	ctx3.drawImage(Img.block, 387, 0, 190, 60);
+
+	
+	for(var i in UserCon.setAbil){
+		if(UserCon.setAbil[i] != null){
+			ctx3.drawImage(Img.icons[UserCon.setAbil[i]], 60 + (i * 100), 410, 60, 60);
+		}
+	}
+	
+	player = UserCon.character;
+	
+	console.log(player.levelPoints);
+	if(UserCon.onEqip){
+	
+		ctx3.drawImage(Img.str, 50, 80, 60, 60);
+		ctx3.drawImage(Img.vit, 50, 160, 60, 60);
+		ctx3.drawImage(Img.mag, 50, 240, 60, 60);
+		ctx3.drawImage(Img.def, 50, 320, 60, 60);
+		
+		ctx3.drawImage(Img.block, 130, 90, 40, 40);
+		ctx3.drawImage(Img.block, 130, 170, 40, 40);
+		ctx3.drawImage(Img.block, 130, 250, 40, 40);
+		ctx3.drawImage(Img.block, 130, 330, 40, 40);
+		
+		
+		ctx3.fillText(player.strength.toString(),50, 80, 60, 60);
+		ctx3.fillText(player.vit.toString(),50, 160, 60, 60);
+		ctx3.fillText(player.mag.toString(),50, 240, 60, 60);
+		ctx3.fillText(player.def.toString(),50, 320, 60, 60);
+		
+	}
+	if(UserCon.onAbil){
+		var incr1 = 0;
+		var incr2 = 0;
+			
+		for(var i in player.abil){
+		
+			if(player.abil[i] != null){
+			
+				ctx3.drawImage(Img.icons[i], 25 + (incr1 * 80), 85 + (incr2 * 80), 60, 60);
+			
+				incr1++;
+			
+				if(incr1 > 5){
+					incr2++;
+					incr1 = 0;
+				}
+			}			
+		}
+
+	}
+	
+}
+
+changeSetAbil = function(abilNum, pos){
+	console.log(abilNum);
+	console.log(pos);
+	socket.emit('changeSetAbil', {id:selfId, abilNum:abilNum, pos:pos});
+}
+
+drawIcon = function(imgIndex, x, y){
+	
+	ctx3.drawImage(Img.icons[imgIndex], x, y, 60, 60);
+	
+}
+//Character Creation
 
 var ctx2 = document.getElementById("ctx2").getContext("2d");
 ctx2.font = '30px Arial';
 
 creationPack = {};
+
+
 
 var selectClass = function(){
 	ctx2.fillStyle = 'black';
@@ -180,6 +317,7 @@ var userSelec = function(){
 	
 }
 
+//Regular Gameplay Stuff Below
 
 var ctx = document.getElementById("ctx").getContext("2d");
 ctx.font = '30px Arial';
@@ -192,17 +330,59 @@ var Obstacle = function(initPack){
 	self.y = initPack.y;
 	self.dx = initPack.dx;
 	self.dy = initPack.dy;
-	//include self.img here;
+	self.img = initPack.img;
+	self.drawSeed = [];
+	
+	var incr3 = 0;
+	
+	while(incr3 <= 100){
+		self.drawSeed[incr3] = Math.random();
+		incr3++;
+	}
+	
 	Obstacle.list[self.id] = self;
-
 	self.draw = function(){
-	var x = self.x - Player.list[selfId].cx + WIDTH/2;
-	var y = self.y - Player.list[selfId].cy + HEIGHT/2;
+	if(self.img == 1){
 	
-	ctx.drawImage(Img.block, x, y, self.dx, self.dy);
-	//console.log("Drawing Obstacle!");
-	//console.log(self);
+		var x = self.x - Player.list[selfId].cx + WIDTH/2;
+		var y = self.y - Player.list[selfId].cy + HEIGHT/2;
 	
+		incr1 = self.dx/32;
+		console.log(incr1);
+		ctx.drawImage(Img.obs[2], x, y + 32, self.dx, self.dy - 32);
+		while(incr1 >= 1){
+			ctx.drawImage(Img.obs[1], x + (32 * (self.dx/32 - incr1)), y, 32, 32);
+			
+							
+			incr1--;
+		}
+		
+		var wall1 = self.dx/32;
+		var wall2 = self.dy/32;
+		
+		var incr2 = wall1/5;
+		
+		console.log(self.drawSeed);
+		console.log(self.drawSeed[incr2]);
+		
+		while(incr2 >= 1){
+			
+			
+			ctx.drawImage(Img.obs[3], x + (Math.floor(self.drawSeed[Math.floor(incr2)]*wall1) * 32), y + (Math.floor(self.drawSeed[Math.floor(101 - incr2)]*wall2) * 32 + 32), 32, 32);
+
+			incr2--;
+
+			
+		}
+	}
+	else{
+		var x = self.x - Player.list[selfId].cx + WIDTH/2;
+		var y = self.y - Player.list[selfId].cy + HEIGHT/2;
+	
+	
+	
+		ctx.drawImage(Img.obs[self.img], x, y, self.dx, self.dy);
+		}
 	}
 	
 }
@@ -236,7 +416,6 @@ var changeAnimation = function(imgArray, imgIndex, indexMax){
 	if(imgIndex > indexMax){
 	imgIndex = 0;
 	}
-	console.log("Ani Index is:" + imgIndex);
 	return {img: imgArray[imgIndex], index: imgIndex};
 	
 }
@@ -347,7 +526,7 @@ var Player = function(initPack){
 				ctx.scale(1,-1);
 			}
 			ctx.drawImage(self.swordImg, -(50), -(50), 100, 100);
-			5
+			
 			ctx.restore();
 		}
 		
@@ -355,7 +534,7 @@ var Player = function(initPack){
 	ctx.textAlign = "center";
 	ctx.fillText(self.name, x, y - 63);
 		
-			var hpWidth = 60 * self.hp / self.hpMax;
+	var hpWidth = 60 * self.hp / self.hpMax;
 	ctx.fillStyle = 'red';
 	ctx.fillRect(x - hpWidth/2, y - 54, hpWidth,8);
 		//ctx.fillText(self.score, self.x, self.y-60);
@@ -413,7 +592,9 @@ var Bullet = function(initPack){
 		self.img = Img.fireball;
 	
 	}
-	
+	else if(self.type == "windBlast"){
+		self.img = Img.block;
+	}
 	
 		
 	self.draw = function(){
@@ -464,11 +645,25 @@ Bullet.list = {};
 			Player.list = {};
 			Background.list = {};
 			Slime.list = {};
+			UserCon.textBubble = false;
 			
+		}
+		if(data.level){
+			if(data.selfData){
+				UserCon.character = data.selfData;
+				console.log(UserCon.character);
+				}
+			return;
 		}
 	//console.log(data);
 		if(data.selfId)
 			selfId = data.selfId;
+		if(data.selfData){
+			UserCon.character = data.selfData;
+			console.log(UserCon.character);
+		
+			}
+
 		for(var i = 0; i < data.player.length; i++){
 			new Player(data.player[i]);
 		}
@@ -546,6 +741,21 @@ Bullet.list = {};
 		}
 	});
 	
+	socket.on('interactResponse', function(data){
+		if(!data.success){
+			
+			toggleUI();
+			UserCon.textBubble = false;				
+			
+		}
+		else{
+			if(UserCon.menu == true){
+				toggleUI();
+			}
+		}
+			
+	});
+	
 	setInterval( function(){
 		ctx.clearRect(0,0,WIDTH,HEIGHT);
 		
@@ -574,6 +784,18 @@ Bullet.list = {};
 		else{
 			chatbox.style.opacity = 1;
 		}
+		
+		if(UserCon.menu){
+			ctx3.clearRect(0,0,580,480);
+			drawMenu();
+			
+			if(UserCon.dragIcon != null){
+				drawIcon(UserCon.dragIcon, UserCon.mouseX - 42, UserCon.mouseY - 42);
+			}
+		}
+		if(UserCon.textBubble != false){
+			drawTextBubble(UserCon.textBubble);
+		}
 	}, 40);
 	
 	//var drawMap = function(){
@@ -585,6 +807,7 @@ Bullet.list = {};
 	
 	//}
 	
+	//Documet Relation Stuff
 
 	var signDiv = document.getElementById('signDiv');
 	var signDivUsername = document.getElementById('signDiv-username');
@@ -599,6 +822,9 @@ Bullet.list = {};
 	
 	var signDivPassword = document.getElementById('signDiv-password');
 	var backToLog = document.getElementById('backToLog');
+	
+	var menuUI = document.getElementById('menuUI');
+	
 	//signDivSignIn.onclick = function(){
 		//socket.emit('signIn',{username:signDivUsername.value, password:signDivPassword.value});
 	//}
@@ -627,6 +853,7 @@ Bullet.list = {};
 		if(data.success){
 			signDiv.style.display = 'none';
 			gameDiv.style.display = 'inline-block';
+			UserCon.inGame = true;
 		}
 		else
 		alert("Sign in unsuccessful.");
@@ -637,7 +864,9 @@ Bullet.list = {};
 			checkButton.style.display = 'none';
 			resultMsg.innerHTML = "Account created! Your ID is: " + data.id + ". Save this ID, you will use it to log in.";
 			backToLog.style.display = 'inline-block';
-			}
+
+			
+		}
 		else
 			resultMsg.innerHTML = "Username taken, select another username.";
 	});
@@ -648,7 +877,26 @@ var chatInput = document.getElementById('chat-input');
 var chatForm = document.getElementById('chat-form');
 
 
+socket.on('textBubble',function(data){
+	UserCon.textBubble = data;
+	
+});
 
+drawTextBubble = function(data){
+	
+	var x = data.x - Player.list[selfId].cx + WIDTH/2;
+	var y = data.y - Player.list[selfId].cy + HEIGHT/2;
+
+	ctx.strokeRect(x - 126, y - 30, 300, 80);
+	
+	var bubTxt = data.text.split('\br');
+	
+	for(var i in bubTxt){
+	
+		ctx.fillText(bubTxt[i], x + 2, y + i*12 + 2); 
+	
+	}
+}
 
 socket.on('addToChat', function(data){
 	chatText.innerHTML += '<div>' + data + '</div>';
@@ -684,26 +932,61 @@ document.onkeydown = function(event){
 //console.log(document.activeElement.id);
 	if(document.activeElement.id != 'chat-input'){
 		if(event.keyCode == 68)
-		socket.emit('keyPress', {inputId:'right', state:true});
+			socket.emit('keyPress', {inputId:'right', state:true});
 		else if(event.keyCode == 83)
-		socket.emit('keyPress', {inputId:'down', state:true});
+			socket.emit('keyPress', {inputId:'down', state:true});
 		else if(event.keyCode == 65)
-		socket.emit('keyPress', {inputId:'left', state:true});
+			socket.emit('keyPress', {inputId:'left', state:true});
 		else if(event.keyCode == 87)
-		socket.emit('keyPress', {inputId:'up', state:true});
+			socket.emit('keyPress', {inputId:'up', state:true});
+		
+		
+		if(event.keyCode == 69){
+			socket.emit('keyPress', {inputId:'e', state:true});				
+			socket.emit('checkInteract',{id:selfId});	
+			
+
+		}
+		
+		else if(event.keyCode == 49)
+			socket.emit('keyPress', {inputId:'1', state:true});				
+		else if(event.keyCode == 50)
+			socket.emit('keyPress', {inputId:'2', state:true});				
+		else if(event.keyCode == 51)
+			socket.emit('keyPress', {inputId:'3', state:true});				
+		else if(event.keyCode == 52)
+			socket.emit('keyPress', {inputId:'4', state:true});
+		else if(event.keyCode == 53)
+			socket.emit('keyPress', {inputId:'5', state:true});		
+		
 	}
 }
 	
 	document.onkeyup = function(event){
 		
 			if(event.keyCode == 68)
-			socket.emit('keyPress', {inputId:'right', state:false});
+				socket.emit('keyPress', {inputId:'right', state:false});
 			else if(event.keyCode == 83)
-			socket.emit('keyPress', {inputId:'down', state:false});
+				socket.emit('keyPress', {inputId:'down', state:false});
 			else if(event.keyCode == 65)
-			socket.emit('keyPress', {inputId:'left', state:false});
+				socket.emit('keyPress', {inputId:'left', state:false});
 			else if(event.keyCode == 87)
-			socket.emit('keyPress', {inputId:'up', state:false});
+				socket.emit('keyPress', {inputId:'up', state:false});
+			else if(event.keyCode == 69)
+				socket.emit('keyPress', {inputId:'e', state:false});				
+			else if(event.keyCode == 49)
+				socket.emit('keyPress', {inputId:'1', state:false});				
+			else if(event.keyCode == 50)
+				socket.emit('keyPress', {inputId:'2', state:false});				
+			else if(event.keyCode == 51)
+				socket.emit('keyPress', {inputId:'3', state:false});				
+			else if(event.keyCode == 52)
+				socket.emit('keyPress', {inputId:'4', state:false});
+			else if(event.keyCode == 53)
+				socket.emit('keyPress', {inputId:'5', state:false});				
+			
+
+			
 	}
 	document.onmousedown = function(event){
 		socket.emit('keyPress',{inputId: 'attack', state:true});
@@ -726,9 +1009,94 @@ document.onkeydown = function(event){
 			
 			}
 		}
+		
+		
+		if(UserCon.menu){
+			if(isMouseOn(3+12, 0+12, 190, 60)){
+				UserCon.onAbil = true;
+				UserCon.onInv = false;
+				UserCon.onEqip = false;
+			}
+			if(isMouseOn(195+12, 0+12, 190, 60)){
+				UserCon.onAbil = false;
+				UserCon.onInv = true;
+				UserCon.onEqip = false;
+			}
+			if(isMouseOn(387+12, 0+12, 190, 60)){
+				UserCon.onAbil = false;
+				UserCon.onInv = false;
+				UserCon.onEqip = true;
+			}
+			
+		}
+		
+		if(UserCon.menu && UserCon.onEqip){
+		
+			if(UserCon.character.levelPoints > 0){
+				if(isMouseOn(130 + 12, 90 + 12, 40, 40)){
+					socket.emit('statPlus', {id:selfId, stat: "str"});
+					UserCon.character.strength++;
+					UserCon.character.levelPoints--;
+				}
+				if(isMouseOn(130 + 12, 170 + 12, 40, 40)){
+					socket.emit('statPlus', {id:selfId, stat: "vit"});		
+					UserCon.character.vit++;
+					UserCon.character.levelPoints--;
+				}
+				if(isMouseOn(130 + 12, 250 + 12, 40, 40)){
+					socket.emit('statPlus', {id:selfId, stat: "mag"});			
+					UserCon.character.mag++;
+					UserCon.character.levelPoints--;
+				}
+				if(isMouseOn(130 + 12, 330 + 12, 40, 40)){
+					socket.emit('statPlus', {id:selfId, stat: "def"});
+					UserCon.character.def++;
+				UserCon.character.levelPoints--;
+				}
+			}
+		}
+		
+
+		if(UserCon.menu && UserCon.onAbil){
+		
+			var incr1 = 0;
+			var incr2 = 0;
+		
+				for(var i in player.abil){
+			
+					if(player.abil[i] != null){
+			
+						if(isMouseOn(25 + (incr1 * 80) + 12, 85 + (incr2 * 80) + 12, 60, 60)){
+							UserCon.dragIcon = i;
+						}
+						
+					incr1++;
+				
+					if(incr1 > 5){
+						incr2++;
+						incr1 = 0;
+					}
+				}				
+			}
+			
+		}
 	}
 	document.onmouseup = function(event){
+	
 		socket.emit('keyPress', {inputId:'attack', state:false});
+		
+		
+		if(UserCon.dragIcon != null){
+
+			for(i = 0; i < 6; i++){
+				if(isMouseOn(60 + (100 * i), 410, 60, 60)){
+					UserCon.setAbil[i] = UserCon.dragIcon;
+					console.log("Placed in pos " + i);
+					changeSetAbil(UserCon.dragIcon, i);
+				}
+			}
+			UserCon.dragIcon = null;
+		}
 	}
 	document.onmousemove = function(event){
 		mouseMoved(event);
@@ -741,5 +1109,20 @@ document.onkeydown = function(event){
 		socket.emit('keyPress', {inputId:'mouseAngle', state:angle});
 		UserCon.mouseX = event.clientX - 8;
 		UserCon.mouseY = event.clientY - 8;
+	}
+	var toggleUI = function(){
+			
+		if(UserCon.inGame){
+		
+			if(!UserCon.menu){
+				menuUI.style.display = 'inline-block';
+				UserCon.menu = true;
+				UserCon.onAbil = true;
+			}
+			else{
+				menuUI.style.display = 'none';
+				UserCon.menu = false;
+			}
+		}
 	}
 </script>

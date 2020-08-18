@@ -5,6 +5,8 @@ var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
 
+const npcText = require('./client/npcText.json');
+
 app.get('/',function(req, res){
 	res.sendFile(__dirname + '/client/index.html');
 });
@@ -70,6 +72,28 @@ var Entity = function(){
 
 }
 
+var Collider = function(x, y, dx, dy){
+	var self = {
+		x:x,
+		y:y,
+		dx:dx,
+		dy:dy,
+		
+	}
+	
+	
+	self.isCollidingWithBox = function(trgt){
+			
+		if(self.x + self.dx > trgt.x && self.x < trgt.x + trgt.dx && self.y + self.dy > trgt.y && self.y < trgt.y + trgt.dy){
+			return true;
+		}
+		return false;
+	}
+	
+	
+	return self
+}
+
 var getPointDis = function(x1, y1, x2, y2){
 	return Math.sqrt(Math.pow(x1 - x2,2) + Math.pow(y1 - y2,2));
 }
@@ -89,6 +113,8 @@ var Slime = function(map, x, y){
 	self.angle = 0;
 	self.mapNo = map;
 	
+	self.speedDebufX = 0;
+	self.speedDebufY = 0;
 	
 	self.targetPlayer = function(){
 		var distance = self.range;
@@ -106,7 +132,7 @@ var Slime = function(map, x, y){
 	self.attackPlayer = function(playerId){
 
 		var attackAngle = 1;
-		//@Todo, player targeting.
+		//@Todo, player angled targeting.
 		if(Player.list[playerId].x > self.x){
 			self.spdX = 10;
 		}
@@ -137,6 +163,58 @@ var Slime = function(map, x, y){
 		
 		self.x += self.spdX;
 		
+		if(self.speedDebufX != 0){
+			
+			self.x = self.x + self.speedDebufX;
+			if(self.speedDebufX < 0){
+				self.speedDebufX++;
+			}
+			if(self.speedDebufX > 0){
+				self.speedDebufX--;
+			}
+			
+			if(self.speedDebufX < 1 && self.speedDebufX > -1){
+				self.speedDebufX = 0;
+			}
+		}
+		
+		if(self.speedDebufY != 0){
+			
+
+			self.spdY = self.spdY + self.speedDebufY;
+			self.speedDebufY = 0;
+			/*
+			if(self.speedDebufY < 0){
+				self.speedDebufY++;
+			}
+			if(self.speedDebufY > 0){
+				self.speedDebufY--;
+			}
+			
+			if(self.speedDebufY < 1 && self.speedDebufY > -1){
+				self.speedDebufY = 0;
+			}
+			*/
+		}
+		if(self.spdY < 1 && self.spdY > -1){
+			self.spdY = 0;
+		}
+		if(self.spdX < 1 && self.spdX > -1){
+			self.spdX = 0;
+		}
+		
+	}
+	
+	self.checkHealth = function(foeId){
+		if(self.hp <= 0){
+			self.toRemove = true;
+		}
+		
+		if(foeId){
+			Player.list[foeId].xp = Player.list[foeId].xp+1;
+		}
+		
+		
 	}
 	
 	self.getInitPack = function(){
@@ -150,13 +228,19 @@ var Slime = function(map, x, y){
 			hpMax:self.hpMax,
 		}
 	}
-	
+	if(initPack.map[self.mapNo]){
 		initPack.map[self.mapNo].slime.push(self.getInitPack());
+	}
 		Slime.list[self.id] = self;
+		Monster.list[self.id] = self;
 
+		return self.id;
 	
 }
 
+var Monster = function(){};
+
+Monster.list = {};
 Slime.list = {};
 
 Slime.update = function(mapNo){
@@ -178,23 +262,18 @@ Slime.update = function(mapNo){
 		
 		for(var i in Player.list){
 			if(slime.isCollidingWithBox(Player.list[i]) && slime.mapNo == Player.list[i].mapNo){
-				Player.list[i].hp--;	
+				Player.list[i].takeDmg(1);
+					console.log(Player.list[i].hp);
 				Player.list[i].checkHealth();
 			}			
 		}
-		
-		for(var i in Bullet.list){
-			if(slime.isCollidingWithBox(Bullet.list[i]) && Bullet.list[i].mapNo == slime.mapNo){
-				slime.hp = slime.hp - Bullet.list[i].dmg;
-			}
-		}
-		if(slime.hp <= 0){
-			slime.toRemove = true;
-		}
+	
+
 		
 		if(slime.toRemove){
 			removePack.map[mapNo].slime.push(slime.id);
 			delete Slime.list[slime.id];
+			delete Monster.list[slime.id];
 
 		}
 		else{
@@ -206,6 +285,36 @@ Slime.update = function(mapNo){
 	
 }
 
+var checkMonsterHitBox = function(tX, tY, tDx, tDy, tMapNo){
+	
+	collider = new Collider(tX, tY, tDx, tDy);
+	
+	for(var i in Monster.list){
+		monster = Monster.list[i];
+		if(monster.isCollidingWithBox(collider) && tMapNo == monster.mapNo){
+			console.log("Have detected Collision with monster:" + i);
+			return i;
+		}
+	}
+	
+	return false;
+}
+
+
+var checkMonsterHitBall = function(tX, tY, tDx, tDy, tMapNo){
+	
+	collider = new Collider(tX, tY, tDx, tDy);
+	
+	for(var i in Monster.list){
+		monster = Monster.list[i];
+		if(monster.isCollidingWithBall(collider) && tMapNo == monster.mapNo){
+			console.log("Have detected Collision with monster:" + i);
+			return i;
+		}
+	}
+	
+	return false;
+}
 
 Slime.getAllInitPack = function(mapNo){
 			var slime = [];
@@ -227,31 +336,64 @@ var Player = function(id, data){
 		self.name = data.username;
 		self.angle = 0;
 		
+		self.xp = data.xp;
+		
 		self.clas = data.clas;
 		self.level = data.level;
+		self.abil = data.abil;
 		self.mapNo = data.mapNo;
 		self.x = data.x;
 		self.y = data.y;
-		self.meleeScore = false;
+		self.meleeScore = false;		
+		self.setAbil = {};
+		self.items = data.items;
+		
+		self.equiptment = data.equiptment;
+		self.equipt = {};
+		
 		self.hat = data.hat;
 		self.body = data.body;
 		self.weapon = data.weapon;
 		
+		self.speedDebufX = 0;
+		self.speedDebufY = 0;
+		
 		self.number = "" + Math.floor(10 * Math.random());
 		
+		self.floorTouch = false;
 		self.selfpressingRight = false;
 		self.pressingLeft = false;
 		self.pressingUp = false;
 		self.pressingDown = false;
 		self.pressingAttack = false;
 		self.pressingJump = false;
-		
+		self.pressingE = false;
 		self.mouseAngle = 0;
+		self.pressing1 = false;
+		self.pressing2 = false;
+		self.pressing3 = false;
+		self.pressing4 = false;
+		self.pressing5 = false;
 		
+		self.allAbil = [];
+		
+		self.armor = 0;
+		
+		for(var i in data.equipt){
+			armor += data.equipt[i].armor;
+		}
+		
+		self.levelPoints = data.levelPoints;
+		
+		self.strength = data.strength;
+		self.mag = data.mag;
+		self.vit = data.vit;
+		self.def = data.def;
 		
 		self.maxSpd = 10;
-		self.hp = 10;
-		self.hpMax = 10;
+
+		self.hpMax = 10 + (self.vit*3);
+		self.hp = self.hpMax ;
 		self.score = 0;
 		self.jumpSpd = 13;
 		self.dx = 80;
@@ -262,19 +404,31 @@ var Player = function(id, data){
 		self.cooldowns = {};
 		
 		self.cooldowns.basic = 50;
-		
+		self.cooldowns.abil1 = 50;
+		self.cooldowns.abil2 = 50;
+		self.cooldowns.abil3 = 50;
+		self.cooldowns.abil4 = 50;
+		self.cooldowns.abil5 = 50;
+
+												
 				self.arrowCharge = 0;
 		
 		self.checkHealth = function(){
 			if(self.hp <= 0){
 				self.hp = self.hpMax;
 				self.x = 20;
+				self.spdX = 0;
+				self.spdY = 0;
+				self.speedDebufX = 0;
+				self.speedDebufY = 0;
 			}
 		}
 		
 		var super_update = self.update;
 		
 		self.update = function(){
+			
+			
 			
 			self.updateSpd();
 			self.updatePos();
@@ -292,26 +446,67 @@ var Player = function(id, data){
 					self.slashSword();
 				}
 				
-				if(self.clas == 'm' && self.cooldowns.basic <= 0){
+				//if(self.clas == 'm' && self.cooldowns.basic <= 0){
 					
-					self.launchFireball();
-					self.cooldowns.basic = 70;
+					//self.launchFireball();
+				//	self.cooldowns.basic = 70;
 					
-				}
+				//}
 
 			}
 			else if(self.arrowCharge > 10 && self.clas == 'r'){
 				
 				self.fireArrow();
 				self.arrowCharge = 0;
-				self.cooldownsBasic = 50;
+				self.cooldowns.basic = 50;
 				
 			}
 			
-			self.checkInteract();
+			if(self.pressing1 && self.cooldowns.abil1 <= 0 && self.setAbil[0]){
+				console.log(self.setAbil);
+				self.cooldowns.abil1 = self.executeAbil(self.setAbil[0]);
+			}
+			
+			if(self.pressing2 && self.cooldowns.abil2 <= 0 && self.setAbil[1]){
+				
+				self.cooldowns.abil2 = self.executeAbil(self.setAbil[1]);
+			}
+			
+			if(self.pressing3 && self.cooldowns.abil3 <= 0 && self.setAbil[2]){
+				
+				self.cooldowns.abil3 = self.executeAbil(self.setAbil[2]);
+			}
+			if(self.pressing4 && self.cooldowns.abil4 <= 0 && self.setAbil[3]){
+				
+				self.cooldowns.abil4 = self.executeAbil(self.setAbil[3]);
+			}			
+			if(self.pressing5 && self.cooldowns.abil5 <= 0 && self.setAbil[4]){
+				
+				self.cooldowns.abil5 = self.executeAbil(self.setAbil[4]);
+			}
+			//self.checkInteract();
 
 
 		}
+	
+	self.takeDmg = function(dmg){
+		
+			self.hp = self.hp - Math.floor(dmg * (1 - (0.03*self.def)));
+			self.checkHealth();
+	}
+	
+	self.executeAbil = function(abilNum){
+		if(abilNum == 2){
+			self.launchFireball();
+			return 100;
+		}
+		if(abilNum == 3){
+			self.blastWind();
+			return 100;
+		}
+		
+		
+	}
 	
 	self.fireArrow = function(){
 		
@@ -326,6 +521,22 @@ var Player = function(id, data){
 			dy:12,
 			speed:60,
 			type:"arrow",
+		});
+	}
+	
+	self.blastWind = function(){
+		Bullet({
+			parent:self.id,
+			angle:self.mouseAngle,
+			img:0,
+			dmg:5,
+			eff:20,
+			x:self.cx - 31,
+			y:self.cy - 6,
+			dx:50,
+			dy:30,
+			speed:60,
+			type:"windBlast",
 		});
 	}
 	
@@ -379,13 +590,23 @@ var Player = function(id, data){
 			collider.dy = 40;	
 		}		
 		
+		
+		hit = checkMonsterHitBox(collider.x, collider.y, collider.dx, collider.dy, self.mapNo);
+		
+
+		if(hit != false){
+			Monster.list[hit].hp -= self.strength;
+			Monster.list[hit].checkHealth(self.id);
+		}
+		
 		for(var i in Player.list){
 		
-		player = Player.list[i] 	
+			player = Player.list[i] 	
 			
 			if(collider.isCollidingWithBox(player) && self.id != i){
-				player.hp -= 5;
+				player.takeDmg(self.strength);
 				player.checkHealth();
+
 
 			}
 		}
@@ -405,7 +626,10 @@ var Player = function(id, data){
 				
 			}
 			self.x += self.spdX;
-			self.canJump = true;
+			if(self.floorTouch){
+				self.canJump = true;
+				self.floorTouch = false;
+			}
 			
 		}
 		else if(self.spdX < 0){
@@ -414,11 +638,17 @@ var Player = function(id, data){
 				
 			}
 			self.x += self.spdX;
-			self.canJump = true;
+			if(self.floorTouch){
+				self.canJump = true;
+				self.floorTouch = false;
+			}
 
 		}
 		else{
-			self.canJump = true;
+			if(self.floorTouch){
+				self.canJump = true;
+				self.floorTouch = false;
+			}
 			self.spdX = 0;
 			
 		}
@@ -429,37 +659,37 @@ var Player = function(id, data){
 		else if(self.spdY > 0){
 			while(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
 				self.spdY--;
-
 			}
 			self.y += self.spdY;
-			self.canJump = true;
-			
+			//	self.canJump = true;
+				self.floorTouch = true;
 		}
 		else if(self.spdY < 0){
 			while(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY < 0){
 				self.spdY++;
-
+				
 			}
 			self.y += self.spdY;
-			self.canJump = true;
+			if(self.floorTouch){
+			//	self.canJump = true;
+				self.floorTouch = false;
+			}
+		}
 
-		}
-		else{
-			self.canJump = true;
-			self.spdY = 0;
-		}
 		
 		self.cx = self.x + (self.dx/2);
 		self.cy = self.y + (self.dy/2);
 	}
 	
 	self.updateSpd = function(){
+		
 		if(self.pressingRight)
 			self.spdX = self.maxSpd;
 		else if(self.pressingLeft)
 			self.spdX = -self.maxSpd;
 		else
 			self.spdX = 0;
+
 		
 		if(self.pressingUp && self.canJump == true){
 			self.spdY = -self.jumpSpd;
@@ -472,28 +702,184 @@ var Player = function(id, data){
 			self.spdY++;
 		}
 		else if(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
+			
+			if(self.spdY > 0){
+				self.canJump = true;
+				self.floorTouch = true;
+			}
+			
+			
 			while(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
 				self.spdY--;
 				
 			}
-				self.canJump = true;
+
 		}	
+		
+		if(self.speedDebufX != 0){
+			
+			console.log("X debuf:" + self.speedDebufX);
+			
+			
+			self.spdX += self.speedDebufX;
+			if(self.speedDebufX < 0){
+				self.speedDebufX++;
+			}
+			if(self.speedDebufX > 0){
+				self.speedDebufX--;
+			}
+			if(self.speedDebufX <= 1 && self.speedDebufX >= -1){
+				self.speedDebufX = 0;
+			}
+
+		}
+		
+		if(self.speedDebufY != 0){
+			
+			console.log("Y Debuf:" + self.speedDebufY);
+			console.log("y sped:" +self.spdY);
+			
+			self.spdY += self.speedDebufY;
+			
+			self.speedDebufY = 0;
+			
+			/*
+			if(self.speedDebufY < 0){
+				self.speedDebufY++;
+			}
+			if(self.speedDebufY > 0){
+				self.speedDebufY--;
+			}
+			if(self.speedDebufY <= 1 && self.speedDebufY >= -1){
+				self.speedDebufY = 0;
+			}*/
+		}
+		
+		if(self.spdY < 1 && self.spdY > -1){
+			self.spdY = 0;
+		}
+		
+		if(self.spdX < 1 && self.spdX > -1){
+			self.spdX = 0;
+		}
+		
 
 	}
 	
 	self.updateCooldowns = function(){
-		if(self.cooldowns.basic >= 0)
+	if(self.cooldowns.basic >= 0)
 		self.cooldowns.basic--;
+	if(self.cooldowns.abil1 >= 0)
+		self.cooldowns.abil1--;
+	if(self.cooldowns.abil2 >= 0)
+		self.cooldowns.abil2--;
+	if(self.cooldowns.abil3 >= 0)
+		self.cooldowns.abil3--;
+	if(self.cooldowns.abil4 >= 0)
+		self.cooldowns.abil4--;
+	if(self.cooldowns.abil5 >= 0)
+		self.cooldowns.abil5--;
 	}
 	
 	self.checkInteract = function (){
+		
 		for(var i in Map.list[self.mapNo].doors){
 			
-			if(self.isCollidingWithBox(Map.list[self.mapNo].doors[i]) && self.pressingUp){
+			if(self.isCollidingWithBox(Map.list[self.mapNo].doors[i]) && self.pressingE){
 				Player.changeMap(self.id, Map.list[self.mapNo].doors[i].toMapNo);
+				return true;
 			}
 		}
+		for(var i in Map.list[self.mapNo].npcs){
+			
+			if(self.isCollidingWithBox(Map.list[self.mapNo].npcs[i]) && self.pressingE){
+				Map.list[self.mapNo].npcs[i].interact(self.id);
+				return true;
+			}
+		}
+		
+		return false;
+			
 	}
+	
+	self.levelUp = function(){
+		self.level++;
+		self.levelPoints = self.levelPoints + 2;
+		
+		if(self.level == 2){
+			self.abil[2] = "fireball";
+		}
+		else if(self.level == 4){
+			self.abil[3] = "windBlast";
+		}
+		self.updateDataBase();
+		
+		getPlayerProfile(self.name, function(acData){
+			var socket = SOCKET_LIST[self.id];
+			socket.emit('init',{selfData: {
+				
+				
+					username:self.name, 
+					id:self.id, 
+					level : self.level, 
+					clas : self.clas, 
+					mapNo : self.mapNo, 
+					x : self.x, 
+					y : self.y, 
+					abil : self.abil,
+					equiptment :self.equiptment,
+					items: self.items,
+					levelPoints: self.levelPoints,
+					xp: self.xp,
+					hat : self.hat, 
+					body : self.body, 
+					weapon : self.weapon,
+					
+					strength: self.strength,
+					mag: self.mag,
+					vit: self.vit,
+					def: self.def,
+					
+			}, level:true});
+		});
+		
+	}
+	
+	self.updateDataBase = function(){
+		getPlayerProfile(self.name, function(res){
+			console.log(res);
+			cb = function(){}
+			updateData = {
+				$set:{ 
+					username:res.username, 
+					id:res.id, 
+					level : self.level, 
+					clas : self.clas, 
+					mapNo : self.mapNo, 
+					x : self.x, 
+					y : self.y, 
+					abil : self.abil,
+					equiptment :self.equiptment,
+					items: self.items,
+					levelPoints: self.levelPoints,
+					xp: self.xp,
+					hat : self.hat, 
+					body : self.body, 
+					weapon : self.weapon,
+					
+					strength: self.strength,
+					mag: self.mag,
+					vit: self.vit,
+					def: self.def,
+				}
+			}
+			db.profiles.update({username:res.username},updateData,{upsert:true},function(err){
+					console.log(err);
+			});				
+		});
+
+	}
+
 	
 	self.getInitPack = function(){
 		return {
@@ -584,17 +970,51 @@ Player.onConnect = function(socket, data){
 			player.pressingAttack = data.state;
 		else if (data.inputId === 'mouseAngle')
 			player.mouseAngle = data.state;
+		else if(data.inputId === 'e')
+			player.pressingE = data.state;
+		else if(data.inputId === '1')
+			player.pressing1 = data.state;
+		else if(data.inputId === '2')
+			player.pressing2 = data.state;
+		else if(data.inputId === '3')
+			player.pressing3 = data.state;
+		else if(data.inputId === '4')
+			player.pressing4 = data.state;
+		else if(data.inputId === '5')
+			player.pressing5 = data.state;
 	});
-
 	
-	socket.emit('init',{
-		selfId:socket.id,
-		player:Player.getAllInitPack(Player.list[socket.id].mapNo),
-		bullet:Bullet.getAllInitPack(Player.list[socket.id].mapNo),
-		slime:Slime.getAllInitPack(Player.list[socket.id].mapNo),
-		obstacle:getObstacles(Player.list[socket.id].mapNo),
-		background:getBackground(Player.list[socket.id].mapNo),
+	socket.on('checkInteract', function(data){
+		if(Player.list[socket.id].checkInteract()){
+			socket.emit('interactResponse', {success:true});
+		}
+		else{
+			socket.emit('interactResponse', {success:false});
+		}
+		
 	});
+	
+	sendInitalData(socket.id, data.username, socket);
+	
+	
+}
+
+
+sendInitalData = function(id, username, socket){
+	
+	getPlayerProfile(username, function(acData){
+		playerCharacter = acData;
+		socket.emit('init',{
+			selfId:id,
+			selfData:acData,
+			player:Player.getAllInitPack(Player.list[id].mapNo),
+			bullet:Bullet.getAllInitPack(Player.list[id].mapNo),
+			slime:Slime.getAllInitPack(Player.list[id].mapNo),
+			obstacle:getObstacles(Player.list[id].mapNo),
+			background:getBackground(Player.list[id].mapNo),
+		});
+	});
+	
 	
 }
 
@@ -610,10 +1030,14 @@ Player.getAllInitPack = function(mapNo){
 }
 
 Player.onDisconnect = function(socket){
-
+	
 	dPlayer = Player.list[socket.id];
+	
+
+	
 	if(dPlayer){
 			removePack.map[dPlayer.mapNo].player.push(socket.id);
+				dPlayer.updateDataBase();
 	}
 	
 	delete Player.list[socket.id];
@@ -679,7 +1103,7 @@ var Bullet = function(param){
 	self.mapNo = Player.list[param.parent].mapNo;
 	self.img = param.img;
 	self.type = param.type;
-	
+	self.eff = param.eff;
 	self.exploding = 0;
 	
 	var super_update = self.update;
@@ -715,6 +1139,14 @@ var Bullet = function(param){
 
 				}
 			}
+			
+			hit = checkMonsterHitBall(self.x,self.y, self.dx, self.dy, self.mapNo);
+		
+			if(hit != false){
+				Monster.list[hit].hp -= self.dmg;
+				Monster.list[hit].checkHealth(self.parent);
+				self.toRemove = true;
+			}
 		}
 		
 		if(self.type == "fireball"){
@@ -726,16 +1158,61 @@ var Bullet = function(param){
 					self.explode(100, 10);
 					
 				}
-				
-
+			}
+			
+			hit = checkMonsterHitBall(self.x,self.y, self.dx, self.dy, self.mapNo);
+		
+			if(hit != false){
+				self.explode(100, 10);
 			}
 			
 			if(!isEmpty(self.mapNo, self.x + self.spdX, self.y + self.spdY, self.dx, self.dy)){
 
 				self.explode(100, 10);
-					
+				for(var i in Player.list){
+				var p = Player.list[i];
+				if(self.isCollidingWithBall(p) && self.parent !== p.id && self.mapNo == p.mapNo){
+					self.toRemove = true;
+					p.hp -= self.dmg;
+					p.checkHealth();
+					//p.y = Math.random() * 500;
+
+				}
+			}
+			
+			hit = checkMonsterHitBall(self.x,self.y, self.dx, self.dy, self.mapNo);
+		
+			if(hit != false){
+				Monster.list[hit].hp -= self.dmg;
+				Monster.list[hit].checkHealth(self.parent);
+				self.toRemove = true;
+			}	
 					
 			}		
+		}
+		
+		if(self.type == "windBlast"){
+			for(var i in Player.list){
+				var p = Player.list[i];
+				if(self.isCollidingWithBall(p) && self.parent !== p.id && self.mapNo == p.mapNo){
+					self.toRemove = true;
+					p.hp -= self.dmg;
+					p.checkHealth();
+					//p.y = Math.random() * 500;
+					p.speedDebufX = Math.cos(self.angle/180*Math.PI)* self.eff;
+					p.speedDebufY = Math.sin(self.angle/180*Math.PI)* self.eff;
+				}
+			}
+			
+			hit = checkMonsterHitBall(self.x,self.y, self.dx, self.dy, self.mapNo);
+		
+			if(hit != false){
+				Monster.list[hit].hp -= self.dmg;
+				Monster.list[hit].checkHealth(self.parent);					
+				Monster.list[hit].speedDebufX = Math.cos(self.angle/180*Math.PI)* self.eff;
+				Monster.list[hit].speedDebufY = Math.sin(self.angle/180*Math.PI)* self.eff;
+				self.toRemove = true;
+			}
 		}
 		
 
@@ -763,6 +1240,13 @@ var Bullet = function(param){
 				}
 				
 
+			}
+			
+			hit = checkMonsterHitBall(explosion.x, explosion.y, explosion.dy, explosion.mapNo);
+		
+			if(hit != false){
+				Monster.list[hit].hp -= dmg;
+				Monster.list[hit].checkHealth(self.parent);
 			}
 			
 		}
@@ -809,14 +1293,65 @@ var Map = function(data){
 	self.monsters = data.monsters;
 	self.background = data.background;
 	self.doors = data.doors;
+	self.npcs = [];
+	for(var i in data.npcs){
+		self.npcs[i] = NPC(data.npcs[i]);
+	}
+	
+	for(var i in self.monsters){
+		
+		monster = self.monsters[i];
+		
+		if(monster.type = "slime"){
+			self.monsters[i].id = Slime(self.id, monster.x, monster.y);
+		}
+	}
 	
 	Map.list[self.id] = self;
+	
+	
 	
 	return self;
 
 }
 
+var NPC = function(data){
+	
+		var self = MapObject(data);
+	self.textData = {
+		x: self.x - 60,
+		y: self.y - 60
+	}
+	self.rotations = {};
+	self.interact = function(id){
+	
+		if(self.id === 1){
+			if(self.rotations[id] == undefined || self.rotations[id] === 0){
+				self.textData.text = npcText.t1;
+				makeTextBubble(id, self.textData);
+				self.rotations[id] = 1;
+			}
+			else if(self.rotations[id] === 1){
+				self.textData.text = npcText.t2;
+				makeTextBubble(id, self.textData);
+				self.rotations[id] = 0;
+			}
+		}
+	}
+	
+	return self;
+	
+}
+
+var makeTextBubble = function(id, data){
+	socket = SOCKET_LIST[id];
+	
+	socket.emit('textBubble', data);
+}
+
 Map.list = {};
+
+/*
 Map({
 	id:2,
 	name:"test",
@@ -875,7 +1410,9 @@ doors:[{
 	bid:3,
 	toMapNo:3,
 }]
-})
+});
+*/
+
 var Background = function(param){
 
 	var self = {};
@@ -898,6 +1435,18 @@ var Obstacle = function(param){
 	self.img = param.img;
 	self.id = param.id;
 	self.map = param.mapNo;
+	
+	self.getObstacle = function(){
+		return {
+			x: self.x,
+			y: self.y,
+			dx: self.dx,
+			dy:self.dy,
+			img:self.img,
+			id:self.id,
+			map: self.map,
+		}
+	}
 	
 	Map.list[self.map].obstacles[self.id] = self;
 	return self;
@@ -1031,8 +1580,19 @@ var addUser = function(data,cb){
 	id = 100000 * Math.random();
 	id = Math.floor(id).toString();
 
-	db.profiles.insert({username:data.username, id:id, level:1, clas: data.pack.clas, mapNo: 2, x:0, y:-100, hat:data.pack.hat, body:data.pack.body, weapon:data.pack.weapon}, function(err){
+	db.profiles.insert({username:data.username, id:id, level:1, levelPoints: 0, clas: data.pack.clas, mapNo: 2, x:0, y:-100, abil:[], items:[], equiptment:[], xp:0, strength: 1, mag: 1, vit: 1, def: 1, hat:data.pack.hat, body:data.pack.body, weapon:data.pack.weapon}, function(err){
 		cb(id);
+	});
+}
+
+var getPlayerProfile = function(user, cb){
+	db.profiles.findOne({username:user}, function(err,res){
+		if(res){
+			cb(res);
+		}
+		else{
+			cb(null);
+		}
 	});
 }
 
@@ -1059,14 +1619,17 @@ var getPlayerData = function(name, cb){
 }
 
 getMapData("Dev", Map);
-
+getMapData("test", Map);
 
 
 var isEmpty = function(mapNo,x,y,dx,dy){
 	for(var i in Map.list[mapNo].obstacles){
 		obstacle = Map.list[mapNo].obstacles[i];
-		if(x + dx > obstacle.x && x < obstacle.x + obstacle.dx && y + dy > obstacle.y && y < obstacle.y + obstacle.dy)
+		if(x + dx > obstacle.x && x < obstacle.x + obstacle.dx && y + dy > obstacle.y && y < obstacle.y + obstacle.dy){
+			
 			return false;
+			
+		}
 	}
 	return true;
 }
@@ -1120,10 +1683,42 @@ io.sockets.on('connection', function(socket){
 			SOCKET_LIST[i].emit('addToChat', playerName + ': ' + data);
 		}
 	});
+	
+	socket.on('changeSetAbil', function(data){
+		
+		Player.list[data.id].setAbil[data.pos] = data.abilNum;
+		
+		console.log(Player.list[data.id].setAbil);
+		
+	});
+	
+	socket.on('statPlus', function(data){
+		Player.list[data.id].levelPoints--;
+		if(data.stat == "str"){
+			Player.list[data.id].strength++;
+		}
+		if(data.stat == "vit"){
+			Player.list[data.id].vit++;
+		}		
+		if(data.stat == "mag"){
+			Player.list[data.id].mag++;
+		}		
+		if(data.stat == "def"){
+			Player.list[data.id].def++;
+		}		
+	});
+	
 	socket.on('evalServer', function(data){
 		if(!DEBUG)
 			return;
-		
+		res = data.split(" ");
+		if(res[0] == "levelUp"){
+			for(var i in Player.list){
+				if(Player.list[i].name == res[1])
+					Player.list[i].levelUp();
+			}
+			return;
+		}
 
 		if(data == "spawnSlime"){
 		Slime(2, 900, -200);
@@ -1146,7 +1741,8 @@ for(var i in Map.list){
 
 
 //Initializing test-slimes
-Slime(2, 900, -200);
+//Slime(2, 900, -200);
+
 
 setInterval(function(){
 	var pack = {map:[]};
