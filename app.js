@@ -12,49 +12,7 @@ console.log("Server started.");
 
 var SOCKET_LIST = {};
 
-var Entity = function(){
-    var self = {
-        map:0,
-        x:0,
-        y:0,
-        dx:0,
-        dy:0,
-        spdX:0,
-        spdY:0,
-        id:"",
-        mapNo:null,
-    }
-    
-    self.findMapNo = function(){
-        for(var i in Map.list){
-            if(Map.list[i].name == self.map){
-                self.mapNo = i;
-            }
-        }
-    }
-    
-    self.update = function(){
-        self.updatePosition();
-    }
-    
-    self.updatePosition = function (){
-        self.x += self.spdX;
-        self.y += self.spdY;
-    }
-    
-    self.getDistance = function(pt){
-        return Math.sqrt(Math.pow(self.x - pt.x,2) + Math.pow(self.y - pt.y,2));
-    }
-    
-    self.isCollidingWith = function(trgt){
-        if(self.x + self.dx > trgt.x && self.x < trgt.x + trgt.dx && self.y + self.dy > trgt.y && self.y < trgt.y + trgt.dy){
-            return true;
-        }
-        return false;
-    }
-    
-    return self;
-}
+var Entity = require('./entity.js')
 
 var Slime = function(map, x, y){
     var self = Entity();
@@ -70,7 +28,7 @@ var Slime = function(map, x, y){
     self.dy = 50;
     self.map = map;
     
-    self.findMapNo();
+    self.findMapNo(Map);
     
     self.targetPlayer = function(){
         var distance = self.range;
@@ -320,7 +278,7 @@ var Obstacle = function(param){
 
 Obstacle.list = {};
 
-var getObstacles = function(mapNo){
+Obstacle.getObstacles = function(mapNo){
     var obstacles = [];
     for(var i in Map.list[mapNo].obstacles){
         obstacles.push(Map.list[mapNo].obstacles[i]);
@@ -356,6 +314,7 @@ Bullet.update = function(mapNo){
 }
 
 var isEmpty = function(mapNo,x,y,dx,dy){
+
 	for(var i in Map.list[mapNo].obstacles){
 		obstacle = Map.list[mapNo].obstacles[i];
 		if(x + dx > obstacle.x && x < obstacle.x + obstacle.dx && y + dy > obstacle.y && y < obstacle.y + obstacle.dy)
@@ -373,7 +332,7 @@ io.sockets.on('connection', function(socket){
     SOCKET_LIST[socket.id] = socket;
     
     socket.on('signIn', function(data){
-        Player.onConnect(socket, data.username);
+        Player.onConnect(Map, socket, data.username, Bullet, Slime, Obstacle, isEmpty);
         socket.emit('signInResponse',{success:true});
     });
     
@@ -417,7 +376,7 @@ setInterval(function(){
     var pack = {map:[]};
     for(var i in Map.list){
         pack.map[i] = {
-            player:Player.update(i),
+            player:Player.update(i, Map, Bullet),
             bullet:Bullet.update(i),
             slime:Slime.update(i),
         }

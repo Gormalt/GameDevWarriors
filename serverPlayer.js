@@ -1,4 +1,6 @@
-var Player = function(id, username){
+var Entity = require('./entity.js')
+
+var Player = function(id, username, isEmpty){
     var self = Entity();
     self.id = id;
     self.name = username;
@@ -21,8 +23,9 @@ var Player = function(id, username){
     self.cx = self.x+(self.dx/2)
     self.cy = self.y+(self.dy/2)
     self.canJump = false;
-    
-    self.update = function(){
+    self.isEmpty = isEmpty;
+
+    self.update = function(Bullet){
         if(self.hp <= 0){
             self.hp = self.hpMax;
             self.x = 20;
@@ -31,29 +34,29 @@ var Player = function(id, username){
         self.updatePos();
         
         if(self.pressingAttack){
-            self.shootBullet(self.mouseAngle);
+            self.shootBullet(self.mouseAngle, Bullet);
         }
     }
 
-    self.shootBullet = function(angle){
+    self.shootBullet = function(angle, Bullet){
         var b = Bullet(self.id,angle);
         b.x = self.cx;
         b.y = self.cy;
     }
 
     self.updatePos = function(){
-        if(isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy)){
+        if(self.isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy)){
             self.x += self.spdX;
         }
         else if(self.spdX > 0){
-            while(!isEmpty(self.mapNo, self.x + self.spdX, self.y,self.dx,self.dy) && self.spdX > 0){
+            while(!self.isEmpty(self.mapNo, self.x + self.spdX, self.y,self.dx,self.dy) && self.spdX > 0){
                 self.spdX--;
             }
             self.x += self.spdX;
             self.canJump = true;
         }
         else if(self.spdX < 0){
-            while(!isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy) && self.spdX < 0){
+            while(!self.isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy) && self.spdX < 0){
                 self.spdX++;
             }
             self.x += self.spdX;
@@ -64,18 +67,18 @@ var Player = function(id, username){
             self.spdX = 0;
         }
         
-        if(isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
+        if(self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
             self.y += self.spdY;
         }
         else if(self.spdY > 0){
-            while(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
+            while(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
                 self.spdY--;
             }
             self.y += self.spdY;
             self.canJump = true;
         }
         else if(self.spdY < 0){
-            while(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY < 0){
+            while(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY < 0){
                 self.spdY++;
             }
             self.y += self.spdY;
@@ -105,11 +108,11 @@ var Player = function(id, username){
         else if(self.pressingDown)
             self.spdY = +self.jumpSpd;
         
-        if(isEmpty(self.mapNo, self.x, self.y + self.spdY + 1, self.dx, self.dy)){
+        if(self.isEmpty(self.mapNo, self.x, self.y + self.spdY + 1, self.dx, self.dy)){
             self.spdY++;
         }
-        else if(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
-            while(!isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
+        else if(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
+            while(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
                 self.spdY--;
             }
             self.canJump = true;
@@ -156,15 +159,15 @@ var Player = function(id, username){
 
 Player.list = {};
 
-Player.onConnect = function(socket, username){
-    var player = Player(socket.id, username);
+Player.onConnect = function(Map, socket, username, Bullet, Slime, Obstacle, isEmpty){
+    var player = Player(socket.id, username, isEmpty);
     player.map = "test";
     
     if(player.name == 'bob'){
         player.map = "Dev";
     }
 
-    player.findMapNo();
+    player.findMapNo(Map);
     player.init();
 
     socket.on('keyPress', function(data){
@@ -187,7 +190,7 @@ Player.onConnect = function(socket, username){
         player:Player.getAllInitPack(Player.list[socket.id].mapNo),
         bullet:Bullet.getAllInitPack(Player.list[socket.id].mapNo),
         slime:Slime.getAllInitPack(Player.list[socket.id].mapNo),
-        obstacle:getObstacles(Player.list[socket.id].mapNo),
+        obstacle:Obstacle.getObstacles(Player.list[socket.id].mapNo),
     });
 }
 
@@ -210,12 +213,12 @@ Player.onDisconnect = function(socket){
     delete Player.list[socket.id];
 }
 
-Player.update = function(mapNo){
+Player.update = function(mapNo, Map, Bullet){
     var pack = [];
     for(var i in Player.list){
         if(Player.list[i].map == Map.list[mapNo].name){
             var player = Player.list[i];
-            player.update();
+            player.update(Bullet);
             pack.push(player.getUpdatePack());    
         }
     }
