@@ -477,6 +477,18 @@ var Bullet = function(parent, angle){
 
 Bullet.list = {};
 
+var Map = function(data){
+	var self = {};
+	self.id = data.id;
+	self.name = data.map;
+	self.obstacles = data.obstacles;
+	self.monsters = data.monsters;
+	
+	Map.list[self.id] = self;
+	return self;
+
+}
+
 Map.list = {};
 
 Map({
@@ -529,8 +541,6 @@ var Obstacle = function(param){
 
 Obstacle.list = {};
 
-initObstacles();
-
 var getObstacles = function(mapNo){
     var obstacles = [];
     for(var i in Map.list[mapNo].obstacles){
@@ -564,6 +574,15 @@ Bullet.update = function(mapNo){
         }
     }
     return pack;
+}
+
+var isEmpty = function(mapNo,x,y,dx,dy){
+	for(var i in Map.list[mapNo].obstacles){
+		obstacle = Map.list[mapNo].obstacles[i];
+		if(x + dx > obstacle.x && x < obstacle.x + obstacle.dx && y + dy > obstacle.y && y < obstacle.y + obstacle.dy)
+			return false;
+	}
+	return true;
 }
 
 var DEBUG = true;
