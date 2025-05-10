@@ -1,5 +1,5 @@
-var mongojs = require("mongojs");
-var db = mongojs('localhost:27017/GameDevWarriors', ['maps']);
+//var mongojs = require("mongojs");
+//var db = mongojs('localhost:27017/GameDevWarriors', ['maps']);
 
 var express = require('express');
 var app = express();
@@ -678,10 +678,6 @@ var getMapData = function(map, cb){
 }
 
 
-
-getMapData("Dev", function(data){
-	console.log(data);
-});
 
 console.log(Map.list);
 
