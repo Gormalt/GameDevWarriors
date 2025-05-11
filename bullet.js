@@ -1,7 +1,7 @@
 var Entity = require('./entity.js');
 
 // Bullet constructor function
-var Bullet = function(parent, angle){
+var Bullet = function(parent, angle, Player, Map, initPack){
     var self = Entity();
     self.id = Math.random();
     self.spdX = Math.cos(angle/180*Math.PI)* 10;
@@ -73,7 +73,7 @@ Bullet.getAllInitPack = function(mapNo){
     return bullets;
 }
 
-Bullet.update = function(mapNo){
+Bullet.update = function(mapNo, Map, removePack){
     var pack = [];
     for(var i in Bullet.list){
         if(Bullet.list[i].map == Map.list[mapNo].name){
@@ -90,15 +90,4 @@ Bullet.update = function(mapNo){
     return pack;
 }
 
-// Export the Bullet constructor and methods
-module.exports = function(playerList, mapList, initPack, removePack) {
-    // Store references to required external objects
-    Player = playerList;
-    Map = mapList;
-    
-    // Establish the global variables needed by the Bullet module
-    if (initPack) this.initPack = initPack;
-    if (removePack) this.removePack = removePack;
-    
-    return Bullet;
-};
+module.exports = Bullet;

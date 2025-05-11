@@ -153,7 +153,7 @@ Slime.getAllInitPack = function(mapNo){
 var Player = require('./serverPlayer.js');
 
 // Import Bullet class from new separate file
-var bulletModule = require('./bullet.js');
+var Bullet = require('./bullet.js');
 
 var Map = function(data){
 	var self = {};
@@ -246,7 +246,7 @@ io.sockets.on('connection', function(socket){
     SOCKET_LIST[socket.id] = socket;
     
     socket.on('signIn', function(data){
-        Player.onConnect(Map, socket, data.username, Bullet, Slime, Obstacle, isEmpty);
+        Player.onConnect(Map, socket, data.username, Bullet, Slime, Obstacle, isEmpty, initPack);
         socket.emit('signInResponse',{success:true});
     });
     
@@ -284,8 +284,6 @@ for(var i in Map.list){
     removePack.map[i] = {player:[], bullet:[], slime:[]};
 }
 
-// Initialize Bullet with required dependencies
-var Bullet = bulletModule(Player.list, Map.list, initPack, removePack);
 
 Slime("test", 900, -200);
 
@@ -294,7 +292,7 @@ setInterval(function(){
     for(var i in Map.list){
         pack.map[i] = {
             player:Player.update(i, Map, Bullet),
-            bullet:Bullet.update(i),
+            bullet:Bullet.update(i, Map, removePack),
             slime:Slime.update(i),
         }
     }

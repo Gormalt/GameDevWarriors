@@ -1,6 +1,6 @@
 var Entity = require('./entity.js')
 
-var Player = function(id, username, isEmpty){
+var Player = function(id, username, isEmpty, initPack){
     var self = Entity();
     self.id = id;
     self.name = username;
@@ -25,7 +25,7 @@ var Player = function(id, username, isEmpty){
     self.canJump = false;
     self.isEmpty = isEmpty;
 
-    self.update = function(Bullet){
+    self.update = function(Bullet, Map){
         if(self.hp <= 0){
             self.hp = self.hpMax;
             self.x = 20;
@@ -34,12 +34,12 @@ var Player = function(id, username, isEmpty){
         self.updatePos();
         
         if(self.pressingAttack){
-            self.shootBullet(self.mouseAngle, Bullet);
+            self.shootBullet(self.mouseAngle, Bullet, Map);
         }
     }
 
-    self.shootBullet = function(angle, Bullet){
-        var b = Bullet(self.id,angle);
+    self.shootBullet = function(angle, Bullet, Map){
+        var b = Bullet(self.id, angle, Player, Map, initPack);
         b.x = self.cx;
         b.y = self.cy;
     }
@@ -159,8 +159,8 @@ var Player = function(id, username, isEmpty){
 
 Player.list = {};
 
-Player.onConnect = function(Map, socket, username, Bullet, Slime, Obstacle, isEmpty){
-    var player = Player(socket.id, username, isEmpty);
+Player.onConnect = function(Map, socket, username, Bullet, Slime, Obstacle, isEmpty, initPack){
+    var player = Player(socket.id, username, isEmpty, initPack);
     player.map = "test";
     
     if(player.name == 'bob'){
@@ -218,7 +218,7 @@ Player.update = function(mapNo, Map, Bullet){
     for(var i in Player.list){
         if(Player.list[i].map == Map.list[mapNo].name){
             var player = Player.list[i];
-            player.update(Bullet);
+            player.update(Bullet, Map);
             pack.push(player.getUpdatePack());    
         }
     }
