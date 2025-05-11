@@ -2,13 +2,16 @@ var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
 
+// Import configuration
+var config = require('./config');
+
 app.get('/',function(req, res){
     res.sendFile(__dirname + '/client/index.html');
 });
 app.use('/client', express.static(__dirname + '/client'));
 
-serv.listen(8000);
-console.log("Server started.");
+serv.listen(config.server.port);
+console.log("Server started on port", config.server.port);
 
 var SOCKET_LIST = {};
 
@@ -37,39 +40,15 @@ var Map = function(data){
 
 Map.list = {};
 
-Map({
-    id:2,
-    map:"test",
-    obstacles:[
-        {
-            img:0,
-            x:-600, 
-            y:10, 
-            dx:2000, 
-            dy:600,
-            id:2
-        },
-        {
-            img:0,
-            x:100, 
-            y:-60, 
-            dx:20, 
-            dy:20,
-            id:1
-        },
-        {
-            img:0,
-            x:120, 
-            y:-260, 
-            dx:50, 
-            dy:50,
-            id:3
-        }
-    ],
-    monsters:[]
-});
-
-Map({id:5,map:"Dev",obstacles:[],monsters:[]});
+// Create maps from configuration
+for (const [mapName, mapData] of Object.entries(config.maps)) {
+    Map({
+        id: mapData.id,
+        map: mapName,
+        obstacles: mapData.obstacles,
+        monsters: []
+    });
+}
 
 var Obstacle = function(param){
     var self = Entity();
@@ -105,7 +84,7 @@ var isEmpty = function(mapNo,x,y,dx,dy){
 	return true;
 }
 
-var DEBUG = true;
+var DEBUG = config.server.debug;
 
 var io = require('socket.io')(serv,{});
 io.sockets.on('connection', function(socket){
@@ -135,7 +114,8 @@ io.sockets.on('connection', function(socket){
             return;
 
         if(data == "spawnSlime"){
-            Slime("test", 900, -200, Map, Player, Bullet, isEmpty, initPack);
+            // Spawn slime from config
+            Slime("test", config.maps["test"].defaultSlimes[0].x, config.maps["test"].defaultSlimes[0].y, Map, Player, Bullet, isEmpty, initPack);
             return;
         }
         var res = eval(data);
@@ -152,8 +132,12 @@ for(var i in Map.list){
     removePack.map[i] = {player:[], bullet:[], slime:[]};
 }
 
-
-Slime("test", 900, -200, Map, Player, isEmpty, initPack);
+// Spawn default slimes for each map
+for (const [mapName, mapData] of Object.entries(config.maps)) {
+    for (const slimeData of mapData.defaultSlimes) {
+        Slime(mapName, slimeData.x, slimeData.y, Map, Player, isEmpty, initPack);
+    }
+}
 
 setInterval(function(){
     var pack = {map:[]};
@@ -180,4 +164,4 @@ setInterval(function(){
         initPack.map[i] = {player:[], bullet:[], obstacle:[], slime:[]};
         removePack.map[i] = {player:[], bullet:[], slime:[]};
     }
-}, 1000/25);
+}, config.server.updateInterval);

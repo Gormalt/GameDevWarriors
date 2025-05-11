@@ -1,4 +1,5 @@
 var Entity = require('./entity.js');
+var config = require('./config');
 
 // Slime constructor function
 var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
@@ -6,13 +7,13 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
     self.x = x;
     self.y = y;
     self.id = Math.random();
-    self.maxhp = 10;
-    self.hp = 10;
-    self.range = 250;
-    self.cooldown = 4000;
+    self.maxhp = config.slime.maxHealth;
+    self.hp = config.slime.maxHealth;
+    self.range = config.slime.detectionRange;
+    self.cooldown = config.slime.attackCooldown;
     self.toRemove = false;
-    self.dx = 50;
-    self.dy = 50;
+    self.dx = config.slime.dimensions.width;
+    self.dy = config.slime.dimensions.height;
     self.map = map;
     
     self.findMapNo(Map);
@@ -32,25 +33,25 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
     self.attackPlayer = function(playerId){
         var attackAngle = 1;
         if(Player.list[playerId].x > self.x){
-            self.spdX = 10;
+            self.spdX = config.slime.attackSpeed;
         }
         else {
-            self.spdX = -10;
+            self.spdX = -config.slime.attackSpeed;
         }
-        self.spdY = -10;
+        self.spdY = config.slime.jumpSpeed;
         cooldown = 0;
     }
     
     self.updatePos = function(){
-        if(isEmpty(self.mapNo, self.x, self.y + 1, 50, 50)){
-            self.spdY++;
+        if(isEmpty(self.mapNo, self.x, self.y + 1, config.slime.dimensions.width, config.slime.dimensions.height)){
+            self.spdY += config.slime.gravityAcceleration;
         }
         else if(self.spdY > 0){
             self.spdY = 0;
             self.spdX = 0;
         }
         
-        if(isEmpty(self.mapNo, self.x, self.y + self.spdY, 50, 50)){
+        if(isEmpty(self.mapNo, self.x, self.y + self.spdY, config.slime.dimensions.width, config.slime.dimensions.height)){
             self.y += self.spdY;
         }
         else{
@@ -68,7 +69,7 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
             hp:self.hp,
             dx:self.dx,
             dy:self.dy,
-            hpMax:self.hpMax,
+            hpMax:self.maxhp,
         }
     }
     
@@ -102,7 +103,7 @@ Slime.update = function(mapNo, Map, Player, Bullet, removePack){
             
             for(var i in Player.list){
                 if(slime.isCollidingWith(Player.list[i])){
-                    Player.list[i].hp--;    
+                    Player.list[i].hp -= config.slime.damage;    
                 }            
             }
             

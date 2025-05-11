@@ -1,4 +1,5 @@
 var Entity = require('./entity.js')
+var config = require('./config')
 
 var Player = function(id, username, isEmpty, initPack){
     var self = Entity();
@@ -12,14 +13,14 @@ var Player = function(id, username, isEmpty, initPack){
     self.pressingAttack = false;
     self.pressingJump = false;
     self.mouseAngle = 0;
-    self.maxSpd = 10;
-    self.hp = 10;
-    self.hpMax = 10;
+    self.maxSpd = config.player.maxSpeed;
+    self.hp = config.player.maxHealth;
+    self.hpMax = config.player.maxHealth;
     self.score = 0;
-    self.jumpSpd = 13;
-    self.y = -80;
-    self.dx = 80;
-    self.dy = 80;
+    self.jumpSpd = config.player.jumpSpeed;
+    self.y = config.player.spawnY;
+    self.dx = config.player.dimensions.width;
+    self.dy = config.player.dimensions.height;
     self.cx = self.x+(self.dx/2)
     self.cy = self.y+(self.dy/2)
     self.canJump = false;
@@ -27,8 +28,8 @@ var Player = function(id, username, isEmpty, initPack){
 
     self.update = function(Bullet, Map){
         if(self.hp <= 0){
-            self.hp = self.hpMax;
-            self.x = 20;
+            self.hp = self.hpMax * config.player.respawnHealthFactor;
+            self.x = config.player.respawnX;
         }
         self.updateSpd();
         self.updatePos();
@@ -163,8 +164,9 @@ Player.onConnect = function(Map, socket, username, Bullet, Slime, Obstacle, isEm
     var player = Player(socket.id, username, isEmpty, initPack);
     player.map = "test";
     
-    if(player.name == 'bob'){
-        player.map = "Dev";
+    // Check if player has special map assignment
+    if(config.specialPlayers[player.name]){
+        player.map = config.specialPlayers[player.name];
     }
 
     player.findMapNo(Map);

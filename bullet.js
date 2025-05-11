@@ -1,35 +1,36 @@
 var Entity = require('./entity.js');
+var config = require('./config');
 
 // Bullet constructor function
 var Bullet = function(parent, angle, Player, Map, initPack){
     var self = Entity();
     self.id = Math.random();
-    self.spdX = Math.cos(angle/180*Math.PI)* 10;
-    self.spdY = Math.sin(angle/180*Math.PI)* 10;
+    self.spdX = Math.cos(angle/180*Math.PI)* config.bullet.speed;
+    self.spdY = Math.sin(angle/180*Math.PI)* config.bullet.speed;
     self.parent = parent;
     self.timer = 0;
-    self.dx = 20;
-    self.dy = 20;
+    self.dx = config.bullet.dimensions.width;
+    self.dy = config.bullet.dimensions.height;
     self.toRemove = false;
     self.map = Player.list[parent].map;
     self.mapNo = Player.list[parent].mapNo;
     
     self.update = function(){
-        if(self.timer++ > 100)
+        if(self.timer++ > config.bullet.lifespan)
             self.toRemove = true;
         self.updatePosition();
         
         for(var i in Player.list){
             var p = Player.list[i];
-            if(self.getDistance(p) < 32 && self.parent !== p.id){
+            if(self.getDistance(p) < config.bullet.hitRange && self.parent !== p.id){
                 self.toRemove = true;
-                p.hp -= 1;
+                p.hp -= config.bullet.damage;
 
                 if(p.hp <= 0) {
                     var shooter = Player.list[self.parent];
                     if(shooter)
-                        shooter.score += 1;
-                    p.hp = p.hpMax;
+                        shooter.score += config.player.scorePerKill;
+                    p.hp = p.hpMax * config.player.respawnHealthFactor;
                     p.x = Math.random() * 500;
                 }
             }
