@@ -153,7 +153,7 @@ for(var i in Map.list){
 }
 
 
-Slime("test", 900, -200, Map, Player, Bullet, isEmpty, initPack);
+Slime("test", 900, -200, Map, Player, isEmpty, initPack);
 
 setInterval(function(){
     var pack = {map:[]};

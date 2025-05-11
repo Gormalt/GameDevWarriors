@@ -1,7 +1,7 @@
 var Entity = require('./entity.js');
 
 // Slime constructor function
-var Slime = function(map, x, y, Map, Player, Bullet, isEmpty, initPack){
+var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
     var self = Entity();
     self.x = x;
     self.y = y;
