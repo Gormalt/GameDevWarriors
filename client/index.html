@@ -10,7 +10,7 @@
 </div>
 
 <div id="gameDiv" style="display:none;">
-    <canvas id="ctx" width="1200" height="500" style="border:1px solid #000000;"></canvas>
+    <canvas id="ctx" style="border:1px solid #000000;"></canvas>
     <div id="chatbox" style="position:absolute;top:20px;left:680px;z-index:1;padding-left:10px;padding-right:10px;background-color:rgb(240,240,240);padding-top:10px;">
         <div id="chat-text" style="width:500px;height:100px;overflow-y:scroll;">
             <div>Hello!</div>
@@ -23,21 +23,22 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/client/config.js"></script>
 <script src="/client/clientPlayer.js"></script>
 <script> 
-var WIDTH = 1200;
-var HEIGHT = 500;
+var WIDTH = config.canvas.width;
+var HEIGHT = config.canvas.height;
 var socket = io();
 
 var UserCon = {};
 
 var Img = {};
 Img.player = new Image();
-Img.player.src = '/client/img/White Block.png';
+Img.player.src = config.assets.images.player;
 Img.bullet = new Image();
-Img.bullet.src = '/client/img/Bullet.png';
+Img.bullet.src = config.assets.images.bullet;
 Img.block = new Image();
-Img.block.src = '/client/img/White Block.png';
+Img.block.src = config.assets.images.block;
 
 var ctx2 = document.getElementById("ctx2").getContext("2d");
 ctx2.font = '30px Arial';
@@ -66,9 +67,21 @@ var avatarMaker = function(clasChar){
     drawAvatarPre(1,1,1);
 }
 
-var ctx = document.getElementById("ctx").getContext("2d");
+var canvas = document.getElementById("ctx");
+canvas.width = config.canvas.width;
+canvas.height = config.canvas.height;
+var ctx = canvas.getContext("2d");
 ctx.font = '30px Arial';
 var textBox = document.getElementById('chatbox');
+// Update chatbox positioning from config
+textBox.style.position = 'absolute';
+textBox.style.top = config.ui.chatbox.position.y + 'px';
+textBox.style.left = config.ui.chatbox.position.x + 'px';
+
+// Update chat-text dimensions from config
+var chatText = document.getElementById('chat-text');
+chatText.style.width = config.ui.chatbox.width + 'px';
+chatText.style.height = config.ui.chatbox.height + 'px';
 
 var Obstacle = function(initPack){
     var self = {};
@@ -282,7 +295,7 @@ socket.on('initial', function(data){
 chatForm.onsubmit = function(e){
     e.preventDefault();
 
-    if(chatInput.value[0] === '/')
+    if(chatInput.value[0] === config.chat.commandPrefix)
         socket.emit('evalServer', chatInput.value.slice(1));
     else
         socket.emit('sendMsgToServer', chatInput.value);
@@ -298,25 +311,25 @@ var isMouseOn = function(mX, mY, mWidth, mHeight){
 
 document.onkeydown = function(event){
     if(document.activeElement.id != 'chat-input'){
-        if(event.keyCode == 68)
+        if(event.keyCode == config.keyCodes.right)
             socket.emit('keyPress', {inputId:'right', state:true});
-        else if(event.keyCode == 83)
+        else if(event.keyCode == config.keyCodes.down)
             socket.emit('keyPress', {inputId:'down', state:true});
-        else if(event.keyCode == 65)
+        else if(event.keyCode == config.keyCodes.left)
             socket.emit('keyPress', {inputId:'left', state:true});
-        else if(event.keyCode == 87)
+        else if(event.keyCode == config.keyCodes.up)
             socket.emit('keyPress', {inputId:'up', state:true});
     }
 }
     
 document.onkeyup = function(event){
-    if(event.keyCode == 68)
+    if(event.keyCode == config.keyCodes.right)
         socket.emit('keyPress', {inputId:'right', state:false});
-    else if(event.keyCode == 83)
+    else if(event.keyCode == config.keyCodes.down)
         socket.emit('keyPress', {inputId:'down', state:false});
-    else if(event.keyCode == 65)
+    else if(event.keyCode == config.keyCodes.left)
         socket.emit('keyPress', {inputId:'left', state:false});
-    else if(event.keyCode == 87)
+    else if(event.keyCode == config.keyCodes.up)
         socket.emit('keyPress', {inputId:'up', state:false});
 }
 

@@ -1,7 +1,3 @@
-// Note: We need to consider how to handle config on client side
-// Since we cannot easily access server config, we'll keep the hardcoded values here
-// or you would need to send configuration data from server to client
-
 var Player = function(initPack){
     var self = {};
     self.id = initPack.id;
@@ -29,15 +25,15 @@ var Player = function(initPack){
         var x = self.x - Player.list[selfId].cx + self.dx/2 + WIDTH/2;
         var y = self.y - Player.list[selfId].cy + self.dy/2 + HEIGHT/2;
         
-        ctx.drawImage(Img.player, x - 40, y - 40, 80, 80);
+        ctx.drawImage(Img.player, x - config.player.width/2, y - config.player.height/2, config.player.width, config.player.height);
         
         ctx.fillStyle = 'black';
         ctx.textAlign = "center";
-        ctx.fillText(self.name, x, y - 63);
+        ctx.fillText(self.name, x, y + config.ui.playerName.offsetY);
         
-        var hpWidth = 60 * self.hp / self.hpMax;
+        var hpWidth = config.ui.healthBar.width * self.hp / self.hpMax;
         ctx.fillStyle = 'red';
-        ctx.fillRect(x - hpWidth/2, y - 54, hpWidth,8);
+        ctx.fillRect(x - hpWidth/2, y + config.ui.healthBar.offsetY, hpWidth, config.ui.healthBar.height);
     }
     
     Player.list[self.id] = self;

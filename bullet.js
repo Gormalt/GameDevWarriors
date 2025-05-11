@@ -30,7 +30,7 @@ var Bullet = function(parent, angle, Player, Map, initPack){
                     var shooter = Player.list[self.parent];
                     if(shooter)
                         shooter.score += config.player.scorePerKill;
-                    p.hp = p.hpMax * config.player.respawnHealthFactor;
+                    p.hp = p.hpMax;
                     p.x = Math.random() * 500;
                 }
             }

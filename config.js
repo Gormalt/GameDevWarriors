@@ -18,8 +18,7 @@ module.exports = {
             height: 80
         },
         bulletDamage: 1,
-        scorePerKill: 1,
-        respawnHealthFactor: 1  // multiplier for hpMax on respawn
+        scorePerKill: 1
     },
     
     // Bullet Configuration
@@ -49,14 +48,6 @@ module.exports = {
         damage: 1
     },
     
-    // Display Configuration
-    display: {
-        nameOffsetY: -63,
-        hpBarWidth: 60,
-        hpBarHeight: 8,
-        hpBarOffsetY: -54,
-        playerDrawSize: 80
-    },
     
     // Maps Configuration
     maps: {
