@@ -1,3 +1,7 @@
+// Note: We need to consider how to handle config on client side
+// Since we cannot easily access server config, we'll keep the hardcoded values here
+// or you would need to send configuration data from server to client
+
 var Player = function(initPack){
     var self = {};
     self.id = initPack.id;
