@@ -15,8 +15,6 @@ console.log("Server started on port", config.server.port);
 
 var SOCKET_LIST = {};
 
-var Entity = require('./entity.js')
-
 // Import Player class from separate file
 var Player = require('./serverPlayer.js');
 
