@@ -28,7 +28,7 @@ var Player = function(id, username, gameContainer){
 
     self.update = function(){
         if(self.hp <= 0){
-            self.hp = self.hpMax * config.player.respawnHealthFactor;
+            self.hp = self.hpMax;
             self.x = config.player.respawnX;
         }
         self.updateSpd();
