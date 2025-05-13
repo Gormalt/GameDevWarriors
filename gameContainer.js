@@ -2,13 +2,13 @@ var config = require('./config');
 var Player = require('./serverPlayer.js');
 var Bullet = require('./bullet.js');
 var Slime = require('./slime.js');
-var { Map, Obstacle, isEmpty } = require('./map.js');
+var Map = require('./map.js');
+var Obstacle = require('./map/obstacle.js');
+var isEmpty = require('./map/collision.js');
 
 // Game Container that holds and manages all game-related objects and dependencies
 var GameContainer = function() {
     var self = {};
-    
-    
 
     // Game systems
     self.config = config;
