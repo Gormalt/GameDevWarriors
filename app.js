@@ -2,8 +2,9 @@ var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
 
-// Import configuration
+// Import configuration and GameContainer
 var config = require('./config');
+var GameContainer = require('./gameContainer');
 
 app.get('/',function(req, res){
     res.sendFile(__dirname + '/client/index.html');
@@ -15,18 +16,11 @@ console.log("Server started on port", config.server.port);
 
 var SOCKET_LIST = {};
 
-// Import Player class from separate file
-var Player = require('./serverPlayer.js');
+// Import game classes
 
-// Import Bullet class from new separate file
-var Bullet = require('./bullet.js');
 
-// Import Slime class from separate file
-var Slime = require('./slime.js');
-
-// Import Map, Obstacle, and isEmpty function from separate file
-var { Map, Obstacle, isEmpty } = require('./map.js');
-
+// Create game container and initialize with all dependencies
+var gameContainer = GameContainer();
 
 
 var DEBUG = config.server.debug;
@@ -38,17 +32,17 @@ io.sockets.on('connection', function(socket){
     SOCKET_LIST[socket.id] = socket;
     
     socket.on('signIn', function(data){
-        Player.onConnect(Map, socket, data.username, Bullet, Slime, Obstacle, isEmpty, initPack);
+        gameContainer.onPlayerConnect(socket, data.username);
         socket.emit('signInResponse',{success:true});
     });
     
     socket.on('disconnect', function(){
-        Player.onDisconnect(socket);
+        gameContainer.onPlayerDisconnect(socket);
         delete SOCKET_LIST[socket.id];
     });
     
     socket.on('sendMsgToServer', function(data){
-        var playerName = ("" + Player.list[socket.id].name);
+        var playerName = ("" + gameContainer.players.list[socket.id].name);
         for(var i in SOCKET_LIST){
             SOCKET_LIST[i].emit('addToChat', playerName + ': ' + data);
         }
@@ -57,56 +51,27 @@ io.sockets.on('connection', function(socket){
     socket.on('evalServer', function(data){
         if(!DEBUG)
             return;
-
-        if(data == "spawnSlime"){
-            // Spawn slime from config
-            Slime("test", config.maps["test"].defaultSlimes[0].x, config.maps["test"].defaultSlimes[0].y, Map, Player, Bullet, isEmpty, initPack);
-            return;
-        }
-        var res = eval(data);
-        console.log(res);
-        socket.emit('evalAnswer',res);
+        gameContainer.handleDebugCommand(data, socket);
     });
 });
 
-var initPack = {map:[]};
-var removePack = {map:[]};
-
-for(var i in Map.list){
-    initPack.map[i] = {player:[], bullet:[], obstacle:[], slime:[]};
-    removePack.map[i] = {player:[], bullet:[], slime:[]};
-}
-
-// Spawn default slimes for each map
-for (const [mapName, mapData] of Object.entries(config.maps)) {
-    for (const slimeData of mapData.defaultSlimes) {
-        Slime(mapName, slimeData.x, slimeData.y, Map, Player, isEmpty, initPack);
-    }
-}
-
+// Game loop
 setInterval(function(){
-    var pack = {map:[]};
-    for(var i in Map.list){
-        pack.map[i] = {
-            player:Player.update(i, Map, Bullet),
-            bullet:Bullet.update(i, Map, removePack),
-            slime:Slime.update(i, Map, Player, Bullet, removePack),
-        }
-    }
+    // Update all game systems through the container
+    var pack = gameContainer.update();
 
+    // Send updates to all clients
     for(var i in SOCKET_LIST){
-        for(var n in Map.list){
-            if(Player.list[i] && Map.list[n].name == Player.list[i].map){
+        for(var n in gameContainer.maps.list){
+            if(gameContainer.players.list[i] && gameContainer.maps.list[n].name == gameContainer.players.list[i].map){
                 var socket = SOCKET_LIST[i];
-                socket.emit('init', initPack.map[n]);
+                socket.emit('init', gameContainer.initPack.map[n]);
                 socket.emit('update', pack.map[n]);
-                socket.emit('remove', removePack.map[n]);
+                socket.emit('remove', gameContainer.removePack.map[n]);
             }
         }
     }
     
-    for(var i in Map.list){
-        initPack.map[i] = {player:[], bullet:[], obstacle:[], slime:[]};
-        removePack.map[i] = {player:[], bullet:[], slime:[]};
-    }
+    // Reset packs after sending
+    gameContainer.resetPacks();
 }, config.server.updateInterval);

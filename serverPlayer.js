@@ -1,7 +1,7 @@
-var Entity = require('./entity.js')
-var config = require('./config')
+var Entity = require('./entity.js');
+var config = require('./config');
 
-var Player = function(id, username, isEmpty, initPack){
+var Player = function(id, username, gameContainer){
     var self = Entity();
     self.id = id;
     self.name = username;
@@ -21,12 +21,12 @@ var Player = function(id, username, isEmpty, initPack){
     self.y = config.player.spawnY;
     self.dx = config.player.dimensions.width;
     self.dy = config.player.dimensions.height;
-    self.cx = self.x+(self.dx/2)
-    self.cy = self.y+(self.dy/2)
+    self.cx = self.x+(self.dx/2);
+    self.cy = self.y+(self.dy/2);
     self.canJump = false;
-    self.isEmpty = isEmpty;
+    self.gameContainer = gameContainer;
 
-    self.update = function(Bullet, Map){
+    self.update = function(){
         if(self.hp <= 0){
             self.hp = self.hpMax * config.player.respawnHealthFactor;
             self.x = config.player.respawnX;
@@ -35,29 +35,29 @@ var Player = function(id, username, isEmpty, initPack){
         self.updatePos();
         
         if(self.pressingAttack){
-            self.shootBullet(self.mouseAngle, Bullet, Map);
+            self.shootBullet(self.mouseAngle);
         }
     }
 
-    self.shootBullet = function(angle, Bullet, Map){
-        var b = Bullet(self.id, angle, Player, Map, initPack);
+    self.shootBullet = function(angle){
+        var b = self.gameContainer.bullets(self.id, angle, self.gameContainer);
         b.x = self.cx;
         b.y = self.cy;
     }
 
     self.updatePos = function(){
-        if(self.isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy)){
+        if(self.gameContainer.functions.isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy)){
             self.x += self.spdX;
         }
         else if(self.spdX > 0){
-            while(!self.isEmpty(self.mapNo, self.x + self.spdX, self.y,self.dx,self.dy) && self.spdX > 0){
+            while(!self.gameContainer.functions.isEmpty(self.mapNo, self.x + self.spdX, self.y,self.dx,self.dy) && self.spdX > 0){
                 self.spdX--;
             }
             self.x += self.spdX;
             self.canJump = true;
         }
         else if(self.spdX < 0){
-            while(!self.isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy) && self.spdX < 0){
+            while(!self.gameContainer.functions.isEmpty(self.mapNo, self.x + self.spdX, self.y, self.dx, self.dy) && self.spdX < 0){
                 self.spdX++;
             }
             self.x += self.spdX;
@@ -68,18 +68,18 @@ var Player = function(id, username, isEmpty, initPack){
             self.spdX = 0;
         }
         
-        if(self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
+        if(self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
             self.y += self.spdY;
         }
         else if(self.spdY > 0){
-            while(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
+            while(!self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
                 self.spdY--;
             }
             self.y += self.spdY;
             self.canJump = true;
         }
         else if(self.spdY < 0){
-            while(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY < 0){
+            while(!self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY < 0){
                 self.spdY++;
             }
             self.y += self.spdY;
@@ -109,11 +109,11 @@ var Player = function(id, username, isEmpty, initPack){
         else if(self.pressingDown)
             self.spdY = +self.jumpSpd;
         
-        if(self.isEmpty(self.mapNo, self.x, self.y + self.spdY + 1, self.dx, self.dy)){
+        if(self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + self.spdY + 1, self.dx, self.dy)){
             self.spdY++;
         }
-        else if(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
-            while(!self.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
+        else if(!self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy)){
+            while(!self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + self.spdY, self.dx, self.dy) && self.spdY > 0){
                 self.spdY--;
             }
             self.canJump = true;
@@ -148,9 +148,9 @@ var Player = function(id, username, isEmpty, initPack){
     Player.list[id] = self;
     
     self.init = function(){
-        for(var i in Map.list){
-            if(Map.list[i].name == self.map){
-                initPack.map[i].player.push(self.getInitPack());
+        for(var i in self.gameContainer.maps.list){
+            if(self.gameContainer.maps.list[i].name == self.map){
+                self.gameContainer.initPack.map[i].player.push(self.getInitPack());
             }    
         }
     }    
@@ -159,42 +159,6 @@ var Player = function(id, username, isEmpty, initPack){
 }
 
 Player.list = {};
-
-Player.onConnect = function(Map, socket, username, Bullet, Slime, Obstacle, isEmpty, initPack){
-    var player = Player(socket.id, username, isEmpty, initPack);
-    player.map = "test";
-    
-    // Check if player has special map assignment
-    if(config.specialPlayers[player.name]){
-        player.map = config.specialPlayers[player.name];
-    }
-
-    player.findMapNo(Map);
-    player.init();
-
-    socket.on('keyPress', function(data){
-        if(data.inputId === 'left')
-            player.pressingLeft = data.state;
-        else if(data.inputId === 'right')
-            player.pressingRight = data.state;
-        else if(data.inputId === 'up')
-            player.pressingUp = data.state;
-        else if(data.inputId === 'down')
-            player.pressingDown = data.state;
-        else if(data.inputId === 'attack')
-            player.pressingAttack = data.state;
-        else if (data.inputId === 'mouseAngle')
-            player.mouseAngle = data.state;
-    });
-
-    socket.emit('init',{
-        selfId:socket.id,
-        player:Player.getAllInitPack(Player.list[socket.id].mapNo),
-        bullet:Bullet.getAllInitPack(Player.list[socket.id].mapNo),
-        slime:Slime.getAllInitPack(Player.list[socket.id].mapNo),
-        obstacle:Obstacle.getObstacles(Player.list[socket.id].mapNo),
-    });
-}
 
 Player.getAllInitPack = function(mapNo){
     var player = [];
@@ -206,21 +170,12 @@ Player.getAllInitPack = function(mapNo){
     return player;
 }
 
-Player.onDisconnect = function(socket){
-    for(var i in Map.list){
-        if(Player.list[socket.id] && Map.list[i].name == Player.list[socket.id].map){
-            removePack.map[i].player.push(socket.id);
-        }
-    }
-    delete Player.list[socket.id];
-}
-
-Player.update = function(mapNo, Map, Bullet){
+Player.update = function(mapNo, gameContainer){
     var pack = [];
     for(var i in Player.list){
-        if(Player.list[i].map == Map.list[mapNo].name){
+        if(Player.list[i].map == gameContainer.maps.list[mapNo].name){
             var player = Player.list[i];
-            player.update(Bullet, Map);
+            player.update();
             pack.push(player.getUpdatePack());    
         }
     }

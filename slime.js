@@ -2,7 +2,7 @@ var Entity = require('./entity.js');
 var config = require('./config');
 
 // Slime constructor function
-var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
+var Slime = function(map, x, y, gameContainer){
     var self = Entity();
     self.x = x;
     self.y = y;
@@ -15,15 +15,16 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
     self.dx = config.slime.dimensions.width;
     self.dy = config.slime.dimensions.height;
     self.map = map;
+    self.gameContainer = gameContainer;
     
-    self.findMapNo(Map);
+    self.findMapNo(gameContainer.maps);
     
     self.targetPlayer = function(){
         var distance = self.range;
         var playerId = null;
-        for(var i in Player.list){
-            if(self.getDistance(Player.list[i]) < distance){
-                distance = self.getDistance(Player.list[i]);
+        for(var i in self.gameContainer.players.list){
+            if(self.getDistance(self.gameContainer.players.list[i]) < distance){
+                distance = self.getDistance(self.gameContainer.players.list[i]);
                 playerId = i;
             }
         }
@@ -32,7 +33,7 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
     
     self.attackPlayer = function(playerId){
         var attackAngle = 1;
-        if(Player.list[playerId].x > self.x){
+        if(self.gameContainer.players.list[playerId].x > self.x){
             self.spdX = config.slime.attackSpeed;
         }
         else {
@@ -43,7 +44,7 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
     }
     
     self.updatePos = function(){
-        if(isEmpty(self.mapNo, self.x, self.y + 1, config.slime.dimensions.width, config.slime.dimensions.height)){
+        if(self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + 1, config.slime.dimensions.width, config.slime.dimensions.height)){
             self.spdY += config.slime.gravityAcceleration;
         }
         else if(self.spdY > 0){
@@ -51,7 +52,7 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
             self.spdX = 0;
         }
         
-        if(isEmpty(self.mapNo, self.x, self.y + self.spdY, config.slime.dimensions.width, config.slime.dimensions.height)){
+        if(self.gameContainer.functions.isEmpty(self.mapNo, self.x, self.y + self.spdY, config.slime.dimensions.width, config.slime.dimensions.height)){
             self.y += self.spdY;
         }
         else{
@@ -73,9 +74,9 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
         }
     }
     
-    for(var i in Map.list){
-        if(Map.list[i].name == self.map){
-            initPack.map[i].slime.push(self.getInitPack());
+    for(var i in self.gameContainer.maps.list){
+        if(self.gameContainer.maps.list[i].name == self.map){
+            self.gameContainer.initPack.map[i].slime.push(self.getInitPack());
             Slime.list[self.id] = self;
         }
     }
@@ -85,11 +86,11 @@ var Slime = function(map, x, y, Map, Player, isEmpty, initPack){
 
 Slime.list = {};
 
-Slime.update = function(mapNo, Map, Player, Bullet, removePack){
+Slime.update = function(mapNo, gameContainer){
     var slimePack = [];
     
     for(var i in Slime.list){
-        if(Slime.list[i].map == Map.list[mapNo].name){
+        if(Slime.list[i].map == gameContainer.maps.list[mapNo].name){
             slime = Slime.list[i];
             if(slime.cooldown >= 60 && slime.targetPlayer()){
                 slime.attackPlayer(slime.targetPlayer());
@@ -101,14 +102,14 @@ Slime.update = function(mapNo, Map, Player, Bullet, removePack){
             }
             slime.updatePos();
             
-            for(var i in Player.list){
-                if(slime.isCollidingWith(Player.list[i])){
-                    Player.list[i].hp -= config.slime.damage;    
+            for(var i in gameContainer.players.list){
+                if(slime.isCollidingWith(gameContainer.players.list[i])){
+                    gameContainer.players.list[i].hp -= config.slime.damage;    
                 }            
             }
             
-            for(var i in Bullet.list){
-                if(slime.isCollidingWith(Bullet.list[i])){
+            for(var i in gameContainer.bullets.list){
+                if(slime.isCollidingWith(gameContainer.bullets.list[i])){
                     slime.hp--;
                 }
             }
@@ -118,7 +119,7 @@ Slime.update = function(mapNo, Map, Player, Bullet, removePack){
             }
             
             if(slime.toRemove){
-                removePack.map[mapNo].slime.push(slime.id);
+                gameContainer.removePack.map[mapNo].slime.push(slime.id);
                 delete Slime.list[slime.id];
             }
             else{
